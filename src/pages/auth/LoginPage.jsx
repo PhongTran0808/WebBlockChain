@@ -81,6 +81,11 @@ export default function LoginPage() {
         >
           {loading ? 'Đang xử lý...' : 'Đăng nhập'}
         </button>
+
+        <p className="text-center text-xs text-gray-400 mt-4">
+          Chưa có tài khoản?{' '}
+          <a href="/register" className="text-blue-600 hover:underline font-medium">Đăng ký</a>
+        </p>
       </div>
     </div>
   );

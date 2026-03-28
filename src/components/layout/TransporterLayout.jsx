@@ -3,8 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 
 const tabs = [
-  { to: '/transporter', label: 'Nhiệm vụ', icon: '📋', end: true },
-  { to: '/transporter/scan', label: 'Quét QR', icon: '📷' },
+  { to: '/transporter', label: 'Lô hàng', icon: '📦', end: true },
   { to: '/transporter/offline', label: 'Offline', icon: '📶' },
 ];
 

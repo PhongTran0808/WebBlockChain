@@ -80,7 +80,8 @@ export default function AdminDashboard() {
 
       {tab === 1 && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[400px]">
             <thead className="bg-gray-50">
               <tr>
                 <th className="text-left px-4 py-3 text-gray-600 font-medium">Khu vực</th>
@@ -105,6 +106,7 @@ export default function AdminDashboard() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

@@ -21,14 +21,21 @@ export default function ShopPOS() {
   const [orders, setOrders] = useState([]);
   const [errorFlash, setErrorFlash] = useState(0);
   const [popup, setPopup] = useState(null);
-  const [tab, setTab] = useState('pos'); // 'pos' | 'ledger'
+  const [tab, setTab] = useState('pos');
+  const [scannerOn, setScannerOn] = useState(false); // mặc định TẮT
 
   useEffect(() => {
     orderApi.getOrders().then(r => setOrders(r.data)).catch(() => {});
   }, []);
 
+  // Tắt scanner khi chuyển tab
+  useEffect(() => {
+    if (tab !== 'pos') setScannerOn(false);
+  }, [tab]);
+
   const handleScan = (walletAddress) => {
     beep();
+    setScannerOn(false); // tắt camera sau khi quét
     setPopup({ walletAddress });
   };
 
@@ -78,10 +85,29 @@ export default function ShopPOS() {
             </div>
           </div>
 
-          {/* Scanner */}
+          {/* Scanner với toggle */}
           <div className="lg:w-1/2">
-            <h3 className="font-semibold text-gray-700 mb-3">Quét QR thanh toán</h3>
-            <QrScanner onSuccess={handleScan} onError={() => setErrorFlash(n => n + 1)} />
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-gray-700">Quét QR thanh toán</h3>
+              <button
+                onClick={() => setScannerOn(v => !v)}
+                className={`flex items-center gap-2 px-4 h-9 rounded-xl text-sm font-medium transition-colors
+                  ${scannerOn
+                    ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                    : 'bg-blue-700 text-white hover:bg-blue-800'}`}>
+                <span>{scannerOn ? '⏹' : '▶'}</span>
+                {scannerOn ? 'Tắt máy quét' : 'Bật máy quét'}
+              </button>
+            </div>
+
+            {scannerOn ? (
+              <QrScanner onSuccess={handleScan} onError={() => setErrorFlash(n => n + 1)} />
+            ) : (
+              <div className="bg-gray-100 rounded-2xl flex flex-col items-center justify-center h-56 gap-3 text-gray-400">
+                <span className="text-5xl">📷</span>
+                <p className="text-sm">Bấm "Bật máy quét" để mở camera</p>
+              </div>
+            )}
           </div>
         </div>
       )}

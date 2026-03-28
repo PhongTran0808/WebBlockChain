@@ -101,6 +101,7 @@ mvn spring-boot:run
 ```bash
 cd frontend
 npm run dev
+npm run dev -- --host (mobile)
 ```
 
 > Frontend khởi động tại: http://localhost:7070

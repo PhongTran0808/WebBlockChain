@@ -1,8 +1,12 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
+// Tự động dùng cùng host với browser — hoạt động với localhost và IP LAN/WiFi
+const API_BASE = import.meta.env.VITE_API_URL
+  || `http://${window.location.hostname}:7071`;
+
 const axiosClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:7071',
+  baseURL: API_BASE,
   timeout: 15000,
 });
 

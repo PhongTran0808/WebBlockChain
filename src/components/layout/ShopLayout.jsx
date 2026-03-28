@@ -2,8 +2,9 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 const tabs = [
-  { to: '/shop', label: 'POS', icon: '📷', end: true },
-  { to: '/shop/orders', label: 'Đơn hàng', icon: '📋' },
+  { to: '/shop', label: 'Lô Cứu Trợ', icon: '📦', end: true },
+  { to: '/shop/inventory', label: 'Kho hàng', icon: '🗃️' },
+  { to: '/shop/pos', label: 'Thanh toán', icon: '📷' },
   { to: '/shop/liquidity', label: 'Thanh khoản', icon: '💵' },
 ];
 
