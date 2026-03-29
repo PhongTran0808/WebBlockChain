@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { batchApi } from '../../api/batchApi';
 import { orderApi } from '../../api/orderApi';
@@ -34,6 +34,7 @@ export default function BatchDelivery() {
   const [errorFlash, setErrorFlash]   = useState(0);
   const [confetti, setConfetti]       = useState(false);
   const [processing, setProcessing]   = useState(false);
+  const processingRef = useRef(false); // ref để block đồng bộ (synchronous), tránh duplicate call
   const [tab, setTab]                 = useState('available');
   const [detailBatch, setDetailBatch] = useState(null);
   const [refreshing, setRefreshing]   = useState(false);
@@ -74,7 +75,8 @@ export default function BatchDelivery() {
 
   // ── Quét QR Shop per-card (pickup) ──────────────────────────────────────
   const handleScanShopQR = async (qrText, batchId) => {
-    if (processing) return;
+    if (processingRef.current) return;
+    processingRef.current = true;
     setProcessing(true);
     try {
       const res = await batchApi.pickupBatch(batchId, qrText);
@@ -88,18 +90,21 @@ export default function BatchDelivery() {
       toast.error(err?.response?.data?.message || 'QR không hợp lệ');
       setErrorFlash(n => n + 1);
     } finally {
+      processingRef.current = false;
       setProcessing(false);
     }
   };
 
   // ── Quét QR Citizen phân phát ────────────────────────────────────────────
   const handleScanCitizen = async (walletAddress) => {
-    if (processing) return;
+    // Dùng ref (synchronous) để block duplicate calls — tránh race condition với React setState
+    if (processingRef.current) return;
     if (!walletAddress || walletAddress.length < 10) {
       toast.error('QR không hợp lệ');
       setErrorFlash(n => n + 1);
       return;
     }
+    processingRef.current = true;
     setProcessing(true);
     try {
       const res = await batchApi.deliverToOneCitizen(activeBatch.id, walletAddress);
@@ -115,6 +120,7 @@ export default function BatchDelivery() {
       toast.error(err?.response?.data?.message || 'Phân phát thất bại');
       setErrorFlash(n => n + 1);
     } finally {
+      processingRef.current = false;
       setProcessing(false);
     }
   };

@@ -153,9 +153,11 @@ export default function CampaignManagement() {
     setLoading(true);
     try {
       const res = await adminApi.airdrop(province, Number(amount));
-      toast.success(`Đã giải ngân cho ${res.data.count} Citizen tại ${province}`);
+      toast.success(res.data.message || `Đã giải ngân cho Citizen tại ${province}`);
       loadCampaigns();
-    } catch {} finally {
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Có lỗi xảy ra khi giải ngân');
+    } finally {
       setLoading(false);
     }
   };
@@ -208,15 +210,23 @@ export default function CampaignManagement() {
               : ''}
           </p>
         )}
-        <div className="flex gap-3 flex-wrap">
+        <div className="flex gap-3 flex-wrap items-center">
           <ProvinceSelect value={province} onChange={handleProvinceChange} campaigns={campaigns} />
           <input
             type="number"
             placeholder="Số token/người"
             value={amount}
             onChange={e => setAmount(e.target.value)}
-            className="border rounded-lg px-3 h-10 text-sm w-44 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="border rounded-lg px-3 h-10 text-sm w-40 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          <button
+            onClick={() => handleProvinceChange(province)}
+            className="px-3 h-10 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+            title="Tự động tính đồng đều theo quỹ"
+            disabled={!province}
+          >
+            🔄 Tự động chia đều
+          </button>
           <button
             onClick={handleAirdropClick}
             disabled={loading}

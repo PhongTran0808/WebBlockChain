@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { adminApi } from '../../api/adminApi';
 import TransactionLedger from '../../components/ui/TransactionLedger';
 import toast from 'react-hot-toast';
+import { Link } from 'react-router-dom';
 
 function KpiCard({ label, value, icon }) {
   return (
@@ -110,7 +111,17 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {tab === 2 && <TransactionLedger />}
+      {tab === 2 && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="font-semibold text-gray-700">Sổ cái hệ thống (Rút gọn)</h3>
+            <Link to="/history" className="text-sm text-blue-600 font-medium hover:underline flex items-center gap-1">
+              Mở trang Sao kê Toàn diện <span>↗</span>
+            </Link>
+          </div>
+          <TransactionLedger limit={10} />
+        </div>
+      )}
     </div>
   );
 }

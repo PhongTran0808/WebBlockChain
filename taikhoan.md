@@ -203,6 +203,9 @@ Username là số CCCD 15 chữ số. Mật khẩu tất cả là `123456`.
 | `001234567890075` | Nguyễn Văn 75 | Huế |
 | `001234567890076` | Nguyễn Văn 76 | Hà Nội |
 | `001234567890077` | Nguyễn Văn 77 | TP.HCM |
+| `001234567890078` | Nguyễn Văn 78 | Đồng Nai |
+| `001234567890079` | Nguyễn Văn 79 | Đồng Nai |
+
 
 Dashboard: `/citizen` — Xem số dư token, hiển thị mã QR, đặt hàng tại ReliefMart.
 

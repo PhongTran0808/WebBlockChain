@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { walletApi } from '../../api/walletApi';
+import { useAuth } from '../../context/AuthContext';
 
 // Cache tên user để tránh gọi API lặp lại
 const nameCache = {};
@@ -21,12 +22,14 @@ function shortHash(hash) {
   return hash.slice(0, 8) + '...' + hash.slice(-6);
 }
 
-export default function TransactionLedger() {
+export default function TransactionLedger({ limit = 5 }) {
+  const { user } = useAuth();
   const [txs, setTxs] = useState([]);
   const [names, setNames] = useState({});
   const [loading, setLoading] = useState(true);
 
   const loadNames = useCallback(async (list) => {
+    if (!Array.isArray(list)) return;
     const ids = new Set();
     list.forEach(tx => {
       if (tx.fromUserId) ids.add(tx.fromUserId);
@@ -42,8 +45,9 @@ export default function TransactionLedger() {
   useEffect(() => {
     walletApi.getTransactions()
       .then(r => {
-        setTxs(r.data);
-        loadNames(r.data);
+        const data = Array.isArray(r.data) ? r.data : [];
+        setTxs(data);
+        loadNames(data);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -51,18 +55,28 @@ export default function TransactionLedger() {
 
   if (loading) return (
     <div className="space-y-2">
-      {[1,2,3].map(i => <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />)}
+      {[1,2,3]?.map(i => <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />)}
     </div>
   );
 
-  if (txs.length === 0) return (
+  if (!Array.isArray(txs) || txs.length === 0) return (
     <p className="text-center text-gray-400 text-sm py-8">Chưa có giao dịch nào</p>
   );
 
+  const displayTxs = limit ? txs?.slice(0, limit) : txs;
+
   return (
     <div className="space-y-2">
-      {txs.map(tx => {
-        const isIn = tx.type === 'IN';
+      {displayTxs?.map(tx => {
+        let isIn = false;
+        if (tx.toUserId === user?.userId) {
+            isIn = true;
+        } else if (tx.fromUserId === user?.userId) {
+            isIn = false;
+        } else {
+            isIn = tx.type === 'IN';
+        }
+        
         const counterpartyId = isIn ? tx.fromUserId : tx.toUserId;
         const counterpartyName = counterpartyId ? (names[counterpartyId] || `#${counterpartyId}`) : null;
 

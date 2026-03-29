@@ -23,7 +23,10 @@ axiosClient.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      // Chỉ redirect nếu không phải đang ở trang login và không phải là request login
+      if (window.location.pathname !== '/login' && !error.config.url.includes('/api/auth/login')) {
+        window.location.href = '/login';
+      }
     } else {
       const message = error.response?.data?.error || 'Đã xảy ra lỗi, vui lòng thử lại';
       toast.error(message);

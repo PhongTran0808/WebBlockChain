@@ -5,6 +5,7 @@ import { paymentApi } from '../../api/paymentApi';
 import QrScanner from '../../components/ui/QrScanner';
 import ErrorFlash from '../../components/ui/ErrorFlash';
 import TransactionLedger from '../../components/ui/TransactionLedger';
+import { Link } from 'react-router-dom';
 
 const beep = () => {
   try {
@@ -113,8 +114,14 @@ export default function ShopPOS() {
       )}
 
       {tab === 'ledger' && (
-        <div className="flex-1 p-4">
-          <TransactionLedger />
+        <div className="flex-1 p-4 space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="font-semibold text-gray-700">Giao dịch gần đây</h3>
+            <Link to="/history" className="text-sm text-blue-600 font-medium hover:underline">
+              Xem toàn bộ sao kê →
+            </Link>
+          </div>
+          <TransactionLedger limit={10} />
         </div>
       )}
 

@@ -22,10 +22,10 @@ export default function Analytics() {
   ] : [];
 
   const barData = daily ? [
-    { name: 'Chờ xử lý', value: daily.pending },
-    { name: 'Đang giao', value: daily.inTransit },
-    { name: 'Đã giao', value: daily.delivered },
-    { name: 'Huỷ', value: daily.cancelled },
+    { name: 'Chờ xử lý', value: daily.waiting },
+    { name: 'Chờ lấy/Giao', value: daily.accepted },
+    { name: 'Đang phát', value: daily.inProgress },
+    { name: 'Hoàn tất', value: daily.completed },
   ] : [];
 
   return (
@@ -64,12 +64,20 @@ export default function Analytics() {
       {/* Live feed */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
         <h3 className="font-semibold text-gray-700 mb-4">Giao dịch gần nhất</h3>
-        <div className="space-y-2 max-h-64 overflow-y-auto">
-          {feed.map(tx => (
-            <div key={tx.orderId} className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0">
+        <div className="space-y-4 max-h-64 overflow-y-auto">
+          {feed.map((tx, idx) => (
+            <div key={idx} className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0">
               <div>
                 <p className="text-sm font-medium">#{tx.orderId} — {tx.citizen}</p>
-                <p className="text-xs text-gray-400">{tx.createdAt}</p>
+                <div className="flex gap-2 items-center mt-1">
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    tx.status === 'DONATE' ? 'bg-green-100 text-green-700' :
+                    tx.status === 'ALLOCATE_ESCROW' ? 'bg-yellow-100 text-yellow-700' :
+                    tx.status === 'RECEIVE_RELIEF' || tx.status === 'AIRDROP' ? 'bg-purple-100 text-purple-700' :
+                    'bg-gray-100 text-gray-700'
+                  }`}>{tx.status}</span>
+                  <p className="text-xs text-gray-400">{tx.createdAt}</p>
+                </div>
               </div>
               <span className="text-sm font-semibold text-blue-600">{tx.tokens} token</span>
             </div>

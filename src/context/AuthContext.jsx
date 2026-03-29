@@ -1,9 +1,10 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { parseJwt } from '../utils/jwtHelper';
 
 const AuthContext = createContext(null);
 
 function buildUser(payload) {
+  if (!payload) return null;
   return {
     userId: payload.userId,
     role: payload.role,
@@ -21,11 +22,15 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const savedToken = localStorage.getItem('token');
     if (savedToken) {
-      const payload = parseJwt(savedToken);
-      if (payload && payload.exp * 1000 > Date.now()) {
-        setToken(savedToken);
-        setUser(buildUser(payload));
-      } else {
+      try {
+        const payload = parseJwt(savedToken);
+        if (payload && payload.exp * 1000 > Date.now()) {
+          setToken(savedToken);
+          setUser(buildUser(payload));
+        } else {
+          localStorage.removeItem('token');
+        }
+      } catch (e) {
         localStorage.removeItem('token');
       }
     }
@@ -44,8 +49,15 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const value = useMemo(() => ({ 
+    user, 
+    token, 
+    login, 
+    logout 
+  }), [user, token]);
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { walletApi } from '../../api/walletApi';
 import toast from 'react-hot-toast';
@@ -54,7 +55,7 @@ function TopupModal({ onClose, onSuccess }) {
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState('');
 
-  const selectedVnd = Number(vndInput.replace(/,/g, '')) || 0;
+  const selectedVnd = Number(String(vndInput).replace(/\D/g, '')) || 0;
   const tokenAmount = Math.floor(selectedVnd / TOKEN_TO_VND);
 
   const handlePreset = (vnd) => {
@@ -89,7 +90,7 @@ function TopupModal({ onClose, onSuccess }) {
       <div>
         <p className="text-xs text-gray-500 font-medium mb-2">Chọn mệnh giá nhanh (VNĐ)</p>
         <div className="grid grid-cols-2 gap-2">
-          {TOPUP_PRESETS.map(v => (
+          {TOPUP_PRESETS?.map(v => (
             <button key={v} onClick={() => handlePreset(v)}
               className={`h-11 rounded-xl text-sm font-semibold border-2 transition-colors
                 ${selectedVnd === v
@@ -136,7 +137,7 @@ function TopupModal({ onClose, onSuccess }) {
 }
 
 // ── Modal Quyên góp ───────────────────────────────────────────────────────────
-function DonateModal({ onClose, onSuccess }) {
+function DonateModal({ onClose, onSuccess, balance }) {
   const [provinces, setProvinces] = useState([]);
   const [province, setProvince]   = useState('');
   const [amount, setAmount]       = useState('');
@@ -156,6 +157,7 @@ function DonateModal({ onClose, onSuccess }) {
   const validate = () => {
     if (!province) return 'Chọn tỉnh/thành muốn quyên góp';
     if (tokenAmt <= 0) return 'Nhập số token muốn quyên góp';
+    if (balance !== null && tokenAmt > balance) return `Số dư ví không đủ (hiện có ${balance?.toLocaleString('vi-VN')} token)`;
     if (pin.length < 6) return 'Nhập đủ 6 số PIN';
     return '';
   };
@@ -182,7 +184,7 @@ function DonateModal({ onClose, onSuccess }) {
         <select value={province} onChange={e => { setProvince(e.target.value); setError(''); }}
           className="w-full mt-1 border border-gray-200 rounded-xl px-3 h-11 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50">
           <option value="">-- Chọn tỉnh/thành --</option>
-          {provinces.map(p => (
+          {provinces?.map(p => (
             <option key={p.province} value={p.province}>{p.province}</option>
           ))}
         </select>
@@ -228,7 +230,7 @@ function WithdrawModal({ onClose, onSuccess, balance }) {
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState('');
 
-  const tokenAmt = Number(amount) || 0;
+  const tokenAmt = Number(String(amount).replace(/\D/g, '')) || 0;
   const vnd = tokenAmt * TOKEN_TO_VND;
 
   const validate = () => {
@@ -310,15 +312,19 @@ export default function CitizenHome() {
     walletApi.getTransactions()
       .then(r => {
         const bal = r.data.reduce((sum, tx) => {
-          if (tx.type === 'IN') return sum + Number(tx.amount);
-          if (tx.type === 'OUT') return sum - Number(tx.amount);
+          let txAmt = Number(tx.amount || 0);
+          if (tx.toUserId === user?.userId) return sum + txAmt;
+          if (tx.fromUserId === user?.userId) return sum - txAmt;
+          
+          if (tx.type === 'IN') return sum + txAmt;
+          if (tx.type === 'OUT') return sum - txAmt;
           return sum;
         }, 0);
         setBalance(Math.max(0, bal));
       })
       .catch(() => setBalance(null))
       .finally(() => setLoading(false));
-  }, []);
+  }, [user]);
 
   useEffect(() => { loadBalance(); }, [loadBalance, refreshKey]);
 
@@ -367,12 +373,17 @@ export default function CitizenHome() {
       </div>
 
       {/* Transaction history */}
-      <h2 className="text-base font-semibold text-gray-700 mb-3">Lịch sử giao dịch</h2>
-      <TransactionLedger key={refreshKey} />
+      <div className="flex justify-between items-center mb-3">
+        <h2 className="text-base font-semibold text-gray-700">Giao dịch gần nhất</h2>
+        <Link to="/history" className="text-xs text-blue-600 font-medium hover:underline">
+          Xem tất cả →
+        </Link>
+      </div>
+      <TransactionLedger key={refreshKey} limit={5} />
 
       {/* Modals */}
       {modal === 'topup'    && <TopupModal    onClose={() => setModal(null)} onSuccess={handleSuccess} />}
-      {modal === 'donate'   && <DonateModal   onClose={() => setModal(null)} onSuccess={handleSuccess} />}
+      {modal === 'donate'   && <DonateModal   onClose={() => setModal(null)} onSuccess={handleSuccess} balance={balance} />}
       {modal === 'withdraw' && <WithdrawModal onClose={() => setModal(null)} onSuccess={handleSuccess} balance={balance} />}
     </div>
   );

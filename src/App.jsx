@@ -32,6 +32,10 @@ import TransporterLayout from './components/layout/TransporterLayout';
 import BatchDelivery from './pages/transporter/BatchDelivery';
 import OfflineQueue from './pages/transporter/OfflineQueue';
 
+// Common
+import TransactionHistory from './pages/TransactionHistory';
+import TransparencyPortal from './pages/TransparencyPortal';
+
 function ProtectedRoute({ children, allowedRoles }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
@@ -55,6 +59,8 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/" element={<RoleRedirect />} />
+          <Route path="/transparency" element={<TransparencyPortal />} />
+          <Route path="/history" element={<ProtectedRoute><TransactionHistory /></ProtectedRoute>} />
 
           {/* Admin */}
           <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminLayout /></ProtectedRoute>}>

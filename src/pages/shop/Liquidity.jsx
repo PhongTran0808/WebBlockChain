@@ -1,10 +1,35 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { paymentApi } from '../../api/paymentApi';
+import { walletApi } from '../../api/walletApi';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Liquidity() {
+  const { user } = useAuth();
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
+  const [balance, setBalance] = useState(null);
+  const [fetchingBal, setFetchingBal] = useState(true);
+
+  const loadBalance = useCallback(() => {
+    setFetchingBal(true);
+    walletApi.getTransactions()
+      .then(r => {
+        const bal = r.data.reduce((sum, tx) => {
+          let txAmt = Number(tx.amount || 0);
+          if (tx.toUserId === user?.userId) return sum + txAmt;
+          if (tx.fromUserId === user?.userId) return sum - txAmt;
+          if (tx.type === 'IN') return sum + txAmt;
+          if (tx.type === 'OUT') return sum - txAmt;
+          return sum;
+        }, 0);
+        setBalance(Math.max(0, bal));
+      })
+      .catch(() => setBalance(null))
+      .finally(() => setFetchingBal(false));
+  }, [user]);
+
+  useEffect(() => { loadBalance(); }, [loadBalance]);
 
   const handleWithdraw = async () => {
     if (!amount || Number(amount) <= 0) { toast.error('Nhập số tiền hợp lệ'); return; }
@@ -13,6 +38,7 @@ export default function Liquidity() {
       await paymentApi.withdraw(Number(amount));
       toast.success('Yêu cầu rút tiền đã được ghi nhận');
       setAmount('');
+      loadBalance();
     } catch {} finally {
       setLoading(false);
     }
@@ -24,7 +50,13 @@ export default function Liquidity() {
 
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 mb-4">
         <p className="text-sm text-gray-500 mb-1">Tổng Token Khả Dụng</p>
-        <p className="text-3xl font-bold text-blue-700">— token</p>
+        {fetchingBal ? (
+          <div className="h-9 w-32 bg-gray-200 rounded animate-pulse" />
+        ) : (
+          <p className="text-3xl font-bold text-blue-700">
+            {balance !== null ? balance.toLocaleString('vi-VN') : '---'} token
+          </p>
+        )}
       </div>
 
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
