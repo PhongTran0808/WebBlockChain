@@ -68,13 +68,20 @@ export default function TransactionLedger({ limit = 5 }) {
   return (
     <div className="space-y-2">
       {displayTxs?.map(tx => {
+        const type = tx.type?.toUpperCase();
+        
         let isIn = false;
-        if (tx.toUserId === user?.userId) {
+        // Priority 1: Explicit types that define direction
+        if (['IN', 'RECEIVE_RELIEF', 'AIRDROP'].includes(type)) {
             isIn = true;
-        } else if (tx.fromUserId === user?.userId) {
+        } else if (['OUT', 'DONATE', 'WITHDRAW', 'PAY_SHOP'].includes(type)) {
             isIn = false;
         } else {
-            isIn = tx.type === 'IN';
+            // Priority 2: Fallback to ID comparison if type is generic (like TRANSFER)
+            const isToMe = String(tx.toUserId) === String(user?.userId);
+            const isFromMe = String(tx.fromUserId) === String(user?.userId);
+            if (isToMe) isIn = true;
+            else if (isFromMe) isIn = false;
         }
         
         const counterpartyId = isIn ? tx.fromUserId : tx.toUserId;

@@ -13,7 +13,7 @@ const PROVINCES = [
   'Lào Cai','Long An','Nam Định','Nghệ An','Ninh Bình','Ninh Thuận',
   'Phú Thọ','Phú Yên','Quảng Bình','Quảng Nam','Quảng Ngãi','Quảng Ninh',
   'Quảng Trị','Sóc Trăng','Sơn La','Tây Ninh','Thái Bình','Thái Nguyên',
-  'Thanh Hóa','Thừa Thiên Huế','Tiền Giang','TP. Hồ Chí Minh','Trà Vinh',
+  'Thanh Hóa','Huế','Tiền Giang','TP.HCM','Trà Vinh',
   'Tuyên Quang','Vĩnh Long','Vĩnh Phúc','Yên Bái',
 ];
 
@@ -153,10 +153,13 @@ export default function CampaignManagement() {
     setLoading(true);
     try {
       const res = await adminApi.airdrop(province, Number(amount));
-      toast.success(res.data.message || `Đã giải ngân cho Citizen tại ${province}`);
+      toast.success(res.data.message || `Đã giải ngân tại ${province}`);
       loadCampaigns();
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Có lỗi xảy ra khi giải ngân');
+      const msg = err?.response?.data?.error
+        || err?.response?.data?.message
+        || 'Có lỗi xảy ra khi giải ngân';
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

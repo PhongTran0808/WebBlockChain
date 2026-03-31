@@ -2,7 +2,8 @@ import { NavLink, Outlet } from 'react-router-dom';
 
 const tabs = [
   { to: '/citizen', label: 'Trang chủ', icon: '🏠', end: true },
-  { to: '/citizen/qr', label: 'Mã QR', icon: '📱' },
+  { to: '/citizen/scan', label: 'Quét Shop', icon: '📷' },
+  { to: '/citizen/qr', label: 'Mã Của Tôi', icon: '📱' },
 ];
 
 export default function CitizenLayout() {

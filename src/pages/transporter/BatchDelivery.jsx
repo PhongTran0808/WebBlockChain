@@ -16,7 +16,7 @@ const PROVINCES = [
   'Lào Cai','Long An','Nam Định','Nghệ An','Ninh Bình','Ninh Thuận',
   'Phú Thọ','Phú Yên','Quảng Bình','Quảng Nam','Quảng Ngãi','Quảng Ninh',
   'Quảng Trị','Sóc Trăng','Sơn La','Tây Ninh','Thái Bình','Thái Nguyên',
-  'Thanh Hóa','Thừa Thiên Huế','Tiền Giang','TP. Hồ Chí Minh','Trà Vinh',
+  'Thanh Hóa','Huế','Tiền Giang','TP.HCM','Trà Vinh',
   'Tuyên Quang','Vĩnh Long','Vĩnh Phúc','Yên Bái',
 ];
 
@@ -398,6 +398,7 @@ export default function BatchDelivery() {
           {processing ? (
             <div className="flex justify-center py-16">
               <div className="w-10 h-10 border-4 border-green-200 border-t-green-600 rounded-full animate-spin" />
+              <p className="ml-3 text-sm text-green-700 animate-pulse">Đang xác nhận Web3...</p>
             </div>
           ) : (
             <QrScanner onSuccess={handleScanCitizen} onError={() => setErrorFlash(n => n + 1)} />

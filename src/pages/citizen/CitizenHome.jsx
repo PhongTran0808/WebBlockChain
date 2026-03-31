@@ -340,6 +340,7 @@ export default function CitizenHome() {
         <div>
           <h1 className="text-xl font-bold text-gray-800">Xin chào 👋</h1>
           <p className="text-sm text-gray-500">{user?.fullName || user?.username}</p>
+          <p className="text-xs text-blue-600 font-medium">📍 Địa chỉ: {user?.province || '—'}</p>
         </div>
         <button onClick={logout} className="text-xs text-gray-400 hover:text-red-500 transition-colors">
           Đăng xuất

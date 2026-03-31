@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { QRCodeCanvas } from 'qrcode.react';
 import { batchApi } from '../../api/batchApi';
+import { useAuth } from '../../context/AuthContext';
 
 const STATUS_META = {
   WAITING_SHOP: { label: 'Chờ duyệt',       color: 'bg-amber-100 text-amber-700' },
@@ -52,6 +53,7 @@ function BatchQR({ batch, onZoom }) {
 }
 
 export default function BatchApproval() {
+  const { user }         = useAuth();
   const [batches, setBatches]     = useState([]);
   const [loading, setLoading]     = useState(true);
   const [qrBatch, setQrBatch]     = useState(null);   // modal zoom QR
@@ -101,10 +103,11 @@ export default function BatchApproval() {
   return (
     <div className="p-4 max-w-2xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-1">
         <h2 className="text-xl font-bold text-gray-800">Lô Cứu Trợ</h2>
         <button onClick={load} className="text-sm text-blue-600 hover:underline">🔄 Làm mới</button>
       </div>
+      <p className="text-sm text-gray-500 mb-5 font-medium">📍 Địa chỉ: {user?.province || '—'}</p>
 
       {/* ── 1. LÔ CHỜ DUYỆT ── */}
       {pendingBatches.length > 0 && (

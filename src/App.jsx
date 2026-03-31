@@ -18,6 +18,7 @@ import AdminLayout from './components/layout/AdminLayout';
 // Citizen
 import CitizenLayout from './components/layout/CitizenLayout';
 import CitizenHome from './pages/citizen/CitizenHome';
+import CitizenScanner from './pages/citizen/CitizenScanner';
 import MyQR from './pages/citizen/MyQR';
 
 // Shop
@@ -26,6 +27,7 @@ import ShopPOS from './pages/shop/ShopPOS';
 import BatchApproval from './pages/shop/BatchApproval';
 import Inventory from './pages/shop/Inventory';
 import Liquidity from './pages/shop/Liquidity';
+import ShopReceiveToken from './pages/shop/ShopReceiveToken';
 
 // Transporter
 import TransporterLayout from './components/layout/TransporterLayout';
@@ -72,9 +74,10 @@ export default function App() {
             <Route path="analytics" element={<Analytics />} />
           </Route>
 
-          {/* Citizen — chỉ Home + QR */}
+          {/* Citizen — chỉ Home + QR + Scanner */}
           <Route path="/citizen" element={<ProtectedRoute allowedRoles={['CITIZEN']}><CitizenLayout /></ProtectedRoute>}>
             <Route index element={<CitizenHome />} />
+            <Route path="scan" element={<CitizenScanner />} />
             <Route path="qr" element={<MyQR />} />
           </Route>
 
@@ -83,6 +86,7 @@ export default function App() {
             <Route index element={<BatchApproval />} />
             <Route path="inventory" element={<Inventory />} />
             <Route path="pos" element={<ShopPOS />} />
+            <Route path="receive" element={<ShopReceiveToken />} />
             <Route path="liquidity" element={<Liquidity />} />
           </Route>
 

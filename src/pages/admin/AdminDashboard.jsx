@@ -34,7 +34,17 @@ export default function AdminDashboard() {
     try {
       const res = await adminApi.toggleCampaign(id);
       setCampaigns(prev => prev.map(c => c.id === id ? res.data : c));
-      toast.success('Đã cập nhật trạng thái khu vực');
+      toast.success('Đã cập nhật trạng thái nhận quyên góp');
+    } catch { toast.error('Cập nhật thất bại'); }
+  };
+
+  const handleToggleAutoAirdrop = async (id) => {
+    try {
+      const res = await adminApi.toggleAutoAirdrop(id);
+      // Backend returns Map from getCampaignProvinceStats normally, but here toggle returns CampaignPool
+      // We need to reload to keep stats consistent or manually update
+      setCampaigns(prev => prev.map(c => c.id === id ? { ...c, isAutoAirdrop: res.data.isAutoAirdrop } : c));
+      toast.success('Đã cập nhật tính năng Phân phát tự động');
     } catch { toast.error('Cập nhật thất bại'); }
   };
 
@@ -88,6 +98,7 @@ export default function AdminDashboard() {
                 <th className="text-left px-4 py-3 text-gray-600 font-medium">Khu vực</th>
                 <th className="text-right px-4 py-3 text-gray-600 font-medium">Tổng quỹ</th>
                 <th className="text-center px-4 py-3 text-gray-600 font-medium">Nhận quyên góp</th>
+                <th className="text-center px-4 py-3 text-gray-600 font-medium whitespace-nowrap">Phân phát tự động</th>
               </tr>
             </thead>
             <tbody>
@@ -102,6 +113,17 @@ export default function AdminDashboard() {
                       <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform
                         ${c.isReceivingActive !== false ? 'translate-x-6' : 'translate-x-1'}`} />
                     </button>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <button onClick={() => handleToggleAutoAirdrop(c.id)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                        ${c.isAutoAirdrop ? 'bg-blue-600' : 'bg-gray-300'}`}>
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                        ${c.isAutoAirdrop ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                    <p className={`text-[10px] mt-1 font-bold ${c.isAutoAirdrop ? 'text-blue-600' : 'text-gray-400'}`}>
+                      {c.isAutoAirdrop ? 'BẬT' : 'TẮT'}
+                    </p>
                   </td>
                 </tr>
               ))}
