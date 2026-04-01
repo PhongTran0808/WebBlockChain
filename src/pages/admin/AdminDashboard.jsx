@@ -18,16 +18,60 @@ function KpiCard({ label, value, icon }) {
 
 const TABS = ['Tổng quan', 'Khu vực', 'Sao kê'];
 
+function ConfirmDistributeModal({ campaign, onConfirm, onCancel }) {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <span className="text-3xl">⚠️</span>
+          <h3 className="font-bold text-lg text-gray-800">Xác nhận Phân bổ Quỹ</h3>
+        </div>
+
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 text-sm text-amber-800 leading-relaxed">
+          Bạn chuẩn bị tự động phân bổ toàn bộ quỹ tồn đọng <b>{(campaign.remaining || 0).toLocaleString()} token</b> của khu vực <b>{campaign.province}</b> cho người dân.
+          <br /><br />
+          <b>Cách tính hệ số:</b><br />
+          • Mặc định: <b>1x</b> phần<br />
+          • Tổn thất Mức 2: <b>2x</b> phần<br />
+          • Tổn thất Mức 3: <b>3x</b> phần<br />
+          <br />
+          <span className="text-red-600 font-semibold">⛓ Lưu ý: Giao dịch chạy tự động trên Blockchain và không thể hoàn tác.</span>
+        </div>
+
+        <div className="flex gap-3">
+          <button onClick={() => onConfirm(campaign)}
+            className="flex-1 h-11 bg-blue-700 text-white rounded-xl font-semibold text-sm hover:bg-blue-800 transition-colors">
+            Đồng ý, Phân bổ
+          </button>
+          <button onClick={onCancel}
+            className="flex-1 h-11 bg-gray-100 text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-200 transition-colors">
+            Huỷ bỏ
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [feed, setFeed] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [tab, setTab] = useState(0);
+  const [distributingCamp, setDistributingCamp] = useState(null);
+  const [distributeLoading, setDistributeLoading] = useState(false);
+
+  // Cần dùng adminApi.getProvinceStats để có remaining
+  const loadCampaigns = () => {
+    adminApi.getProvinceStats()
+      .then(r => setCampaigns(r.data))
+      .catch(() => {});
+  };
 
   useEffect(() => {
     adminApi.getStats().then(r => setStats(r.data)).catch(() => {});
     adminApi.getLiveFeed().then(r => setFeed(r.data)).catch(() => {});
-    adminApi.getCampaigns().then(r => setCampaigns(r.data)).catch(() => {});
+    loadCampaigns();
   }, []);
 
   const handleToggle = async (id) => {
@@ -38,14 +82,26 @@ export default function AdminDashboard() {
     } catch { toast.error('Cập nhật thất bại'); }
   };
 
-  const handleToggleAutoAirdrop = async (id) => {
+  const handleDistributeClick = (c) => {
+    setDistributingCamp(c);
+  };
+
+  const handleConfirmDistribute = async (campaign) => {
+    setDistributingCamp(null);
+    setDistributeLoading(true);
+    const toastId = toast.loading('Đang tính toán và thực thi phân bổ...');
+    
     try {
-      const res = await adminApi.toggleAutoAirdrop(id);
-      // Backend returns Map from getCampaignProvinceStats normally, but here toggle returns CampaignPool
-      // We need to reload to keep stats consistent or manually update
-      setCampaigns(prev => prev.map(c => c.id === id ? { ...c, isAutoAirdrop: res.data.isAutoAirdrop } : c));
-      toast.success('Đã cập nhật tính năng Phân phát tự động');
-    } catch { toast.error('Cập nhật thất bại'); }
+      const res = await adminApi.distributeFunds(campaign.id);
+      toast.success(res.data.message || 'Phân bổ quỹ thành công', { id: toastId, duration: 5000 });
+      // Reload campaigns / stats if needed
+      adminApi.getStats().then(r => setStats(r.data));
+      loadCampaigns();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.response?.data?.error || err.message || 'Phân bổ thất bại', { id: toastId, duration: 5000 });
+    } finally {
+      setDistributeLoading(false);
+    }
   };
 
   return (
@@ -98,7 +154,7 @@ export default function AdminDashboard() {
                 <th className="text-left px-4 py-3 text-gray-600 font-medium">Khu vực</th>
                 <th className="text-right px-4 py-3 text-gray-600 font-medium">Tổng quỹ</th>
                 <th className="text-center px-4 py-3 text-gray-600 font-medium">Nhận quyên góp</th>
-                <th className="text-center px-4 py-3 text-gray-600 font-medium whitespace-nowrap">Phân phát tự động</th>
+                <th className="text-center px-4 py-3 text-gray-600 font-medium whitespace-nowrap">Hành động</th>
               </tr>
             </thead>
             <tbody>
@@ -115,15 +171,17 @@ export default function AdminDashboard() {
                     </button>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <button onClick={() => handleToggleAutoAirdrop(c.id)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                        ${c.isAutoAirdrop ? 'bg-blue-600' : 'bg-gray-300'}`}>
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform
-                        ${c.isAutoAirdrop ? 'translate-x-6' : 'translate-x-1'}`} />
+                    <button 
+                      onClick={() => handleDistributeClick(c)}
+                      disabled={distributeLoading}
+                      className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50">
+                      ⚡ Phân bổ quỹ
                     </button>
-                    <p className={`text-[10px] mt-1 font-bold ${c.isAutoAirdrop ? 'text-blue-600' : 'text-gray-400'}`}>
-                      {c.isAutoAirdrop ? 'BẬT' : 'TẮT'}
-                    </p>
+                    {(c.isAutoAirdrop || c.remaining === 0) && (
+                      <p className="text-[10px] mt-1 font-bold text-gray-400">
+                        {c.remaining === 0 ? '(Gần như hết quỹ)' : '(Đã thực thi mốc gần nhất)'}
+                      </p>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -143,6 +201,14 @@ export default function AdminDashboard() {
           </div>
           <TransactionLedger limit={10} />
         </div>
+      )}
+
+      {distributingCamp && (
+        <ConfirmDistributeModal
+          campaign={distributingCamp}
+          onConfirm={handleConfirmDistribute}
+          onCancel={() => setDistributingCamp(null)}
+        />
       )}
     </div>
   );
