@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { damageApi } from '../../api/damageApi';
-import moment from 'moment';
-
 export default function DamageDashboard() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +56,10 @@ export default function DamageDashboard() {
       ) : (
         <div className="space-y-4">
           {reports.map((report) => {
-            const timeDiff = moment().diff(moment(report.createdAt), 'hours');
+            const reportTime = new Date(report.createdAt);
+            const now = new Date();
+            const timeDiffMs = now - reportTime;
+            const timeDiff = Math.floor(timeDiffMs / (1000 * 60 * 60));
             const hoursLeft = Math.max(0, 72 - timeDiff);
 
             let levelClass = 'bg-blue-100 text-blue-700 border-blue-200';
@@ -76,7 +77,7 @@ export default function DamageDashboard() {
                 {report.evidenceImageUrl && (
                   <div className="w-full h-48 bg-gray-100 overflow-hidden">
                     <img 
-                      src={`http://localhost:7071${report.evidenceImageUrl}`} 
+                      src={report.evidenceImageUrl} 
                       alt="Hiện trường" 
                       className="w-full h-full object-cover" 
                     />

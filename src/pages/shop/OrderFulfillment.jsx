@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { orderApi } from '../../api/orderApi';
 import { adminApi } from '../../api/adminApi';
+import { QRCodeCanvas } from 'qrcode.react';
 
 const STATUS_META = {
   PENDING:    { label: 'Chờ chuẩn bị', color: 'bg-amber-100 text-amber-700',  dot: 'bg-amber-400' },
@@ -28,11 +29,35 @@ function ItemName({ itemId }) {
   return <span>{name || `Vật phẩm #${itemId}`}</span>;
 }
 
+function OrderQR({ order, onZoom }) {
+  return (
+    <div
+      className="relative flex justify-center items-center cursor-pointer select-none"
+      onClick={() => onZoom(order)}
+      title="Nhấn để phóng to"
+    >
+      <QRCodeCanvas
+        value={`ORDER:${order.id}`}
+        size={120}
+        bgColor="#ffffff"
+        fgColor="#1e3a8a"
+        level="M"
+      />
+      <div className="absolute bottom-0 inset-x-0 flex justify-center">
+        <span className="text-[10px] text-blue-500 bg-white/80 px-1 rounded">
+          🔍 Nhấn để phóng to
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function OrderFulfillment() {
   const [orders, setOrders] = useState([]);
   const [tab, setTab] = useState('PENDING');
   const [loading, setLoading] = useState(true);
   const [readying, setReadying] = useState(null);
+  const [qrOrder, setQrOrder] = useState(null); // modal zoom QR
 
   const load = useCallback(() => {
     setLoading(true);
@@ -171,9 +196,46 @@ export default function OrderFulfillment() {
                     </button>
                   </div>
                 )}
+                {o.status === 'READY' && (
+                  <div className="px-4 pb-4">
+                    <div className="flex flex-col items-center bg-blue-50 rounded-xl p-3 border border-blue-100">
+                      <p className="text-xs text-blue-700 mb-2 font-medium">
+                        📱 Cho TNV quét mã này để lấy đơn hàng
+                      </p>
+                      <OrderQR order={o} onZoom={setQrOrder} />
+                      <p className="text-[10px] text-gray-400 font-mono mt-2">ORDER:{o.id}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* ── QR Zoom Modal ── */}
+      {qrOrder && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+          onClick={() => setQrOrder(null)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-xs text-center shadow-2xl"
+            onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-lg mb-1">Đơn #{qrOrder.id}</h3>
+            <p className="text-sm text-gray-500 mb-4">Cho TNV quét mã này để lấy hàng</p>
+            <div className="flex justify-center mb-4">
+              <QRCodeCanvas
+                value={`ORDER:${qrOrder.id}`}
+                size={220}
+                bgColor="#ffffff"
+                fgColor="#1e3a8a"
+                level="M"
+              />
+            </div>
+            <p className="text-xs text-gray-400 font-mono mb-4">ORDER:{qrOrder.id}</p>
+            <button onClick={() => setQrOrder(null)}
+              className="w-full h-11 bg-gray-100 text-gray-700 rounded-xl font-medium">
+              Đóng
+            </button>
+          </div>
         </div>
       )}
     </div>

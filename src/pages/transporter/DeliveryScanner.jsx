@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { orderApi } from '../../api/orderApi';
 import { damageApi } from '../../api/damageApi';
@@ -27,6 +28,7 @@ const STEPS = {
 };
 
 export default function DeliveryScanner() {
+  const navigate = useNavigate();
   const [step, setStep] = useState(STEPS.IDLE);
   const [currentOrder, setCurrentOrder] = useState(null);
   const [scannedWallet, setScannedWallet] = useState(null);
@@ -177,7 +179,10 @@ export default function DeliveryScanner() {
       {/* ── IDLE: Màn hình chọn hành động ── */}
       {step === STEPS.IDLE && (
         <div>
-          <h2 className="text-xl font-bold text-gray-800 mb-6">Giao nhận hàng</h2>
+          <div className="flex items-center gap-3 mb-6">
+            <button onClick={() => navigate('/transporter/tasks')} className="text-gray-400 hover:text-gray-600 text-2xl">←</button>
+            <h2 className="text-xl font-bold text-gray-800">Giao nhận hàng</h2>
+          </div>
 
           <div className="grid grid-cols-2 gap-3 mb-6">
             <button onClick={() => setStep(STEPS.SCAN_ORDER)}
@@ -366,7 +371,6 @@ export default function DeliveryScanner() {
                 <input 
                   type="file" 
                   accept="image/*" 
-                  capture="environment" // Hỗ trợ điện thoại bật camera ngay
                   onChange={(e) => setEvidenceFile(e.target.files[0])}
                   className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                 />

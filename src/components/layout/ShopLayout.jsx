@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const tabs = [
   { to: '/shop', label: 'Lô Cứu Trợ', icon: '📦', end: true },
+  { to: '/shop/orders', label: 'Đơn hàng', icon: '📋' },
   { to: '/shop/inventory', label: 'Kho hàng', icon: '🗃️' },
   { to: '/shop/pos', label: 'Thanh toán', icon: '📷' },
   { to: '/shop/receive', label: 'Nhận Token', icon: '💳' },

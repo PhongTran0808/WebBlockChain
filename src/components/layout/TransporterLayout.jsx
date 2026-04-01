@@ -4,6 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 
 const tabs = [
   { to: '/transporter', label: 'Lô hàng', icon: '📦', end: true },
+  { to: '/transporter/tasks', label: 'Đơn lẻ', icon: '🛵' },
+  { to: '/transporter/survey', label: 'Khảo sát', icon: '📷' },
   { to: '/transporter/offline', label: 'Offline', icon: '📶' },
 ];
 

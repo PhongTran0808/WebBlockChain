@@ -13,6 +13,7 @@ import CampaignManagement from './pages/admin/CampaignManagement';
 import UserManagement from './pages/admin/UserManagement';
 import Analytics from './pages/admin/Analytics';
 import ReliefBatchManagement from './pages/admin/ReliefBatchManagement';
+import AdminDamageReports from './pages/admin/AdminDamageReports';
 import AdminLayout from './components/layout/AdminLayout';
 
 // Citizen
@@ -29,11 +30,15 @@ import BatchApproval from './pages/shop/BatchApproval';
 import Inventory from './pages/shop/Inventory';
 import Liquidity from './pages/shop/Liquidity';
 import ShopReceiveToken from './pages/shop/ShopReceiveToken';
+import OrderFulfillment from './pages/shop/OrderFulfillment';
 
 // Transporter
 import TransporterLayout from './components/layout/TransporterLayout';
 import BatchDelivery from './pages/transporter/BatchDelivery';
 import OfflineQueue from './pages/transporter/OfflineQueue';
+import TaskList from './pages/transporter/TaskList';
+import DeliveryScanner from './pages/transporter/DeliveryScanner';
+import StandaloneSurvey from './pages/transporter/StandaloneSurvey';
 
 // Common
 import TransactionHistory from './pages/TransactionHistory';
@@ -73,6 +78,7 @@ export default function App() {
             <Route path="campaigns" element={<CampaignManagement />} />
             <Route path="users" element={<UserManagement />} />
             <Route path="analytics" element={<Analytics />} />
+            <Route path="damage-reports" element={<AdminDamageReports />} />
           </Route>
 
           {/* Citizen — chỉ Home + QR + Scanner + Dashboard */}
@@ -90,12 +96,16 @@ export default function App() {
             <Route path="pos" element={<ShopPOS />} />
             <Route path="receive" element={<ShopReceiveToken />} />
             <Route path="liquidity" element={<Liquidity />} />
+            <Route path="orders" element={<OrderFulfillment />} />
           </Route>
 
           {/* Transporter */}
           <Route path="/transporter" element={<ProtectedRoute allowedRoles={['TRANSPORTER']}><TransporterLayout /></ProtectedRoute>}>
             <Route index element={<BatchDelivery />} />
             <Route path="offline" element={<OfflineQueue />} />
+            <Route path="tasks" element={<TaskList />} />
+            <Route path="scan" element={<DeliveryScanner />} />
+            <Route path="survey" element={<StandaloneSurvey />} />
           </Route>
         </Routes>
       </BrowserRouter>

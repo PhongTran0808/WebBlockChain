@@ -18,4 +18,6 @@ export const adminApi = {
   getTokenFlow: () => axiosClient.get('/api/analytics/token-flow'),
   getDailyStats: () => axiosClient.get('/api/analytics/daily-stats'),
   resolveLostOrder: (id) => axiosClient.post(`/api/orders/${id}/resolve-lost`),
+  getDisputedReports: () => axiosClient.get('/api/admin/damage-reports/disputed'),
+  resolveDamageDispute: (id, acceptReport) => axiosClient.post(`/api/admin/damage-reports/${id}/resolve?acceptReport=${acceptReport}`),
 };

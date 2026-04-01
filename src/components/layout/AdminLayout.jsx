@@ -8,6 +8,7 @@ const navItems = [
   { to: '/admin/items', label: 'Vật phẩm', icon: '📦' },
   { to: '/admin/campaigns', label: 'Chiến dịch', icon: '💰' },
   { to: '/admin/users', label: 'Người dùng', icon: '👥' },
+  { to: '/admin/damage-reports', label: 'Xử lý Tranh chấp', icon: '⚖️' },
   { to: '/admin/analytics', label: 'Phân tích', icon: '📈' },
 ];
 

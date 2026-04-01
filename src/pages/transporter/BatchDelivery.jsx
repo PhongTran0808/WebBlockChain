@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { batchApi } from '../../api/batchApi';
 import { orderApi } from '../../api/orderApi';
+import { damageApi } from '../../api/damageApi';
 import QrScanner from '../../components/ui/QrScanner';
 import ConfettiEffect from '../../components/ui/ConfettiEffect';
 import ErrorFlash from '../../components/ui/ErrorFlash';
@@ -38,6 +39,12 @@ export default function BatchDelivery() {
   const [tab, setTab]                 = useState('available');
   const [detailBatch, setDetailBatch] = useState(null);
   const [refreshing, setRefreshing]   = useState(false);
+
+  // Survey states
+  const [surveyingWallet, setSurveyingWallet] = useState(null);
+  const [damageLevel, setDamageLevel] = useState(1);
+  const [evidenceFile, setEvidenceFile] = useState(null);
+  const [surveyProcessing, setSurveyProcessing] = useState(false);
 
   // Per-card scanner: batchId đang mở scanner
   const [scanningBatchId, setScanningBatchId] = useState(null);
@@ -109,12 +116,9 @@ export default function BatchDelivery() {
     try {
       const res = await batchApi.deliverToOneCitizen(activeBatch.id, walletAddress);
       setActiveBatch(res.data);
-      if (res.data.status === 'COMPLETED') {
-        setConfetti(true);
-        setStep(STEPS.SUCCESS);
-      } else {
-        toast.success(`Đã phân phát! Còn ${res.data.totalPackages - res.data.deliveredCount} phần`);
-      }
+      setSurveyingWallet(walletAddress);
+      setDamageLevel(1);
+      setEvidenceFile(null);
       loadData();
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Phân phát thất bại');
@@ -122,6 +126,43 @@ export default function BatchDelivery() {
     } finally {
       processingRef.current = false;
       setProcessing(false);
+    }
+  };
+
+  const handleCloseSurvey = () => {
+    setSurveyingWallet(null);
+    setDamageLevel(1);
+    setEvidenceFile(null);
+    
+    if (activeBatch && activeBatch.status === 'COMPLETED') {
+      setConfetti(true);
+      setStep(STEPS.SUCCESS);
+    } else if (activeBatch) {
+      toast.success(`Đã kiểm tra xong! Còn ${activeBatch.totalPackages - activeBatch.deliveredCount} phần`);
+    }
+  };
+
+  const handleSubmitSurvey = async (e) => {
+    if (e) e.preventDefault();
+    if ((damageLevel === 2 || damageLevel === 3) && !evidenceFile) {
+      toast.error('Bắt buộc phải có ảnh hiện trường cho mức độ 2 và 3');
+      return;
+    }
+    setSurveyProcessing(true);
+    try {
+      const formData = new FormData();
+      formData.append('walletAddress', surveyingWallet);
+      formData.append('damageLevel', damageLevel);
+      if (evidenceFile) {
+        formData.append('file', evidenceFile);
+      }
+      await damageApi.assessDamageByWallet(formData);
+      toast.success('Đã gửi báo cáo thiệt hại thành công');
+      handleCloseSurvey();
+    } catch (err) {
+      toast.error('Gửi báo cáo thất bại');
+    } finally {
+      setSurveyProcessing(false);
     }
   };
 
@@ -395,7 +436,86 @@ export default function BatchDelivery() {
               {activeBatch.totalPackages - activeBatch.deliveredCount} phần
             </span>
           </div>
-          {processing ? (
+          
+          {surveyingWallet ? (
+            <div className="bg-white rounded-2xl p-5 shadow-lg border border-gray-100">
+              <h3 className="font-bold text-lg mb-4 text-gray-800">Khảo sát thiệt hại sau bão</h3>
+              
+              <div className="space-y-3 mb-6">
+                <label className={`block p-3 rounded-xl border-2 transition-colors cursor-pointer ${damageLevel === 1 ? 'border-blue-500 bg-blue-50' : 'border-gray-100 hover:border-blue-200'}`}>
+                  <div className="flex items-center gap-3">
+                    <input type="radio" value={1} checked={damageLevel === 1} onChange={() => setDamageLevel(1)} className="w-5 h-5 accent-blue-600" />
+                    <div>
+                      <p className="font-bold text-sm text-gray-800">Mức 1 - Bình thường</p>
+                      <p className="text-xs text-gray-500">Ngập nhẹ, nhà & kết cấu an toàn</p>
+                    </div>
+                  </div>
+                </label>
+                <label className={`block p-3 rounded-xl border-2 transition-colors cursor-pointer ${damageLevel === 2 ? 'border-orange-500 bg-orange-50' : 'border-gray-100 hover:border-orange-200'}`}>
+                  <div className="flex items-center gap-3">
+                    <input type="radio" value={2} checked={damageLevel === 2} onChange={() => setDamageLevel(2)} className="w-5 h-5 accent-orange-600" />
+                    <div>
+                      <p className="font-bold text-sm text-gray-800">Mức 2 - Thiệt hại nặng</p>
+                      <p className="text-xs text-gray-500">Ngập sâu, hư hỏng đồ đạc lớn</p>
+                    </div>
+                  </div>
+                </label>
+                <label className={`block p-3 rounded-xl border-2 transition-colors cursor-pointer ${damageLevel === 3 ? 'border-red-500 bg-red-50' : 'border-gray-100 hover:border-red-200'}`}>
+                  <div className="flex items-center gap-3">
+                    <input type="radio" value={3} checked={damageLevel === 3} onChange={() => setDamageLevel(3)} className="w-5 h-5 accent-red-600" />
+                    <div>
+                      <p className="font-bold text-sm text-gray-800">Mức 3 - Nghiêm trọng</p>
+                      <p className="text-xs text-gray-500">Sập nhà, sạt lở, mất trắng tài sản</p>
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              {damageLevel > 1 && (
+                <div className="mb-6">
+                  <p className="text-sm font-semibold mb-2 text-gray-800">📸 Ảnh hiện trường (Bắt buộc)</p>
+                  <label className="block w-full h-32 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors">
+                    {evidenceFile ? (
+                      <div className="text-center">
+                        <p className="text-sm text-blue-600 font-medium">{evidenceFile.name}</p>
+                        <p className="text-xs text-gray-500 mt-1">Nhấn để thay đổi</p>
+                      </div>
+                    ) : (
+                      <div className="text-center text-gray-400">
+                        <span className="text-2xl mb-1">📷</span>
+                        <p className="text-sm font-medium">Chụp hoặc chọn ảnh</p>
+                      </div>
+                    )}
+                    <input type="file" accept="image/*" 
+                      onChange={e => setEvidenceFile(e.target.files[0])} 
+                      className="hidden" />
+                  </label>
+                </div>
+              )}
+
+              {damageLevel === 1 ? (
+                <button onClick={handleCloseSurvey}
+                  className="w-full h-14 bg-gray-100 text-gray-800 rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors border-2 border-gray-200">
+                  ⏭ Mức 1 (Bình thường) - Bỏ qua & Quét tiếp
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button onClick={handleCloseSurvey}
+                    className="flex-1 h-14 bg-gray-100 text-gray-600 rounded-xl font-medium text-sm hover:bg-gray-200 transition-colors">
+                    Hủy báo cáo
+                  </button>
+                  <button onClick={handleSubmitSurvey} disabled={surveyProcessing}
+                    className="flex-1 h-14 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center">
+                    {surveyProcessing ? (
+                      <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin mr-2" /> Đang gửi...</>
+                    ) : (
+                      '🚩 Gửi báo cáo thiệt hại'
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : processing ? (
             <div className="flex justify-center py-16">
               <div className="w-10 h-10 border-4 border-green-200 border-t-green-600 rounded-full animate-spin" />
               <p className="ml-3 text-sm text-green-700 animate-pulse">Đang xác nhận Web3...</p>

@@ -9,11 +9,19 @@ export const damageApi = {
     });
   },
 
+  assessDamageByWallet: (formData) => {
+    return axiosClient.post('/api/transporter/assess-damage-wallet', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
   getPublicReports: () => {
-    return axiosClient.get('/public/damage-reports');
+    return axiosClient.get('/api/public/damage-reports');
   },
 
   reportDispute: (id) => {
-    return axiosClient.post(`/public/damage-reports/${id}/report`);
+    return axiosClient.post(`/api/public/damage-reports/${id}/report`);
   },
 };
