@@ -11,6 +11,7 @@ export const adminApi = {
   deleteItem: (id) => axiosClient.delete(`/api/admin/items/${id}`),
   getCampaigns: () => axiosClient.get('/api/admin/campaigns'),
   toggleCampaign: (id) => axiosClient.put(`/api/admin/campaigns/${id}/toggle`),
+  toggleAutoAirdrop: (id) => axiosClient.put(`/api/admin/campaigns/${id}/toggle-auto-airdrop`),
   getProvinceStats: () => axiosClient.get('/api/admin/province-stats'),
   distributeFunds: (id) => axiosClient.put(`/api/admin/campaigns/${id}/distribute-funds`),
   airdrop: (province, amountPerCitizen) =>

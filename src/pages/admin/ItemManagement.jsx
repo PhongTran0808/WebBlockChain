@@ -78,7 +78,7 @@ export default function ItemManagement() {
         <table className="w-full text-sm min-w-[560px]">
           <thead className="bg-gray-50 text-gray-600">
             <tr>
-              {['ID', 'Hình ảnh', 'Tên', 'Token ID', 'Giá', 'Trạng thái', 'Hành động'].map(h => (
+              {['ID', 'Hình ảnh', 'Tên', 'Giá', 'Trạng thái', 'Hành động'].map(h => (
                 <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
               ))}
             </tr>
@@ -96,7 +96,6 @@ export default function ItemManagement() {
                   />
                 </td>
                 <td className="px-4 py-3 font-medium">{item.name}</td>
-                <td className="px-4 py-3 text-gray-500 font-mono text-xs">{item.tokenId}</td>
                 <td className="px-4 py-3">{item.priceTokens} token</td>
                 <td className="px-4 py-3">
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium

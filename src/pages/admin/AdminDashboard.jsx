@@ -11,55 +11,21 @@ function KpiCard({ label, value, icon }) {
         <span className="text-gray-500 text-sm">{label}</span>
         <span className="text-2xl">{icon}</span>
       </div>
-      <p className="text-3xl font-bold text-gray-800">{value ?? '—'}</p>
+      <p className="text-2xl font-bold text-gray-800 truncate">{value ?? '—'}</p>
     </div>
   );
 }
 
 const TABS = ['Tổng quan', 'Khu vực', 'Sao kê'];
 
-function ConfirmDistributeModal({ campaign, onConfirm, onCancel }) {
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <span className="text-3xl">⚠️</span>
-          <h3 className="font-bold text-lg text-gray-800">Xác nhận Phân bổ Quỹ</h3>
-        </div>
-
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 text-sm text-amber-800 leading-relaxed">
-          Bạn chuẩn bị tự động phân bổ toàn bộ quỹ tồn đọng <b>{(campaign.remaining || 0).toLocaleString()} token</b> của khu vực <b>{campaign.province}</b> cho người dân.
-          <br /><br />
-          <b>Cách tính hệ số:</b><br />
-          • Mặc định: <b>1x</b> phần<br />
-          • Tổn thất Mức 2: <b>2x</b> phần<br />
-          • Tổn thất Mức 3: <b>3x</b> phần<br />
-          <br />
-          <span className="text-red-600 font-semibold">⛓ Lưu ý: Giao dịch chạy tự động trên Blockchain và không thể hoàn tác.</span>
-        </div>
-
-        <div className="flex gap-3">
-          <button onClick={() => onConfirm(campaign)}
-            className="flex-1 h-11 bg-blue-700 text-white rounded-xl font-semibold text-sm hover:bg-blue-800 transition-colors">
-            Đồng ý, Phân bổ
-          </button>
-          <button onClick={onCancel}
-            className="flex-1 h-11 bg-gray-100 text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-200 transition-colors">
-            Huỷ bỏ
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [feed, setFeed] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [tab, setTab] = useState(0);
-  const [distributingCamp, setDistributingCamp] = useState(null);
-  const [distributeLoading, setDistributeLoading] = useState(false);
+  const [confirmingAutoAirdrop, setConfirmingAutoAirdrop] = useState(null);
+  const [autoAirdropLoading, setAutoAirdropLoading] = useState(false);
+  const [refreshLoading, setRefreshLoading] = useState(false);
 
   // Cần dùng adminApi.getProvinceStats để có remaining
   const loadCampaigns = () => {
@@ -74,6 +40,22 @@ export default function AdminDashboard() {
     loadCampaigns();
   }, []);
 
+  const handleRefresh = async () => {
+    setRefreshLoading(true);
+    try {
+      await Promise.all([
+        adminApi.getStats().then(r => setStats(r.data)),
+        adminApi.getLiveFeed().then(r => setFeed(r.data)),
+        loadCampaigns()
+      ]);
+      toast.success('Đã làm mới dữ liệu');
+    } catch (err) {
+      toast.error('Làm mới thất bại');
+    } finally {
+      setRefreshLoading(false);
+    }
+  };
+
   const handleToggle = async (id) => {
     try {
       const res = await adminApi.toggleCampaign(id);
@@ -82,31 +64,69 @@ export default function AdminDashboard() {
     } catch { toast.error('Cập nhật thất bại'); }
   };
 
-  const handleDistributeClick = (c) => {
-    setDistributingCamp(c);
+  const handleToggleAutoAirdrop = async (id) => {
+    try {
+      const res = await adminApi.toggleAutoAirdrop(id);
+      setCampaigns(prev => prev.map(c => c.id === id ? res.data.campaign : c));
+      toast.success('Đã cập nhật trạng thái phân bổ tự động');
+    } catch { toast.error('Cập nhật thất bại'); }
   };
 
-  const handleConfirmDistribute = async (campaign) => {
-    setDistributingCamp(null);
-    setDistributeLoading(true);
-    const toastId = toast.loading('Đang tính toán và thực thi phân bổ...');
+  const handleToggleAutoAirdropClick = (campaign) => {
+    setConfirmingAutoAirdrop(campaign);
+  };
+
+  const handleConfirmAutoAirdrop = async (campaign) => {
+    setConfirmingAutoAirdrop(null);
+    setAutoAirdropLoading(true);
+    const isCurrentlyEnabled = campaign.isAutoAirdrop;
+    const toastId = toast.loading(isCurrentlyEnabled ? 'Đang tắt phân bổ tự động...' : 'Đang bật phân bổ tự động và phân chia quỹ...');
     
     try {
-      const res = await adminApi.distributeFunds(campaign.id);
-      toast.success(res.data.message || 'Phân bổ quỹ thành công', { id: toastId, duration: 5000 });
-      // Reload campaigns / stats if needed
-      adminApi.getStats().then(r => setStats(r.data));
+      const res = await adminApi.toggleAutoAirdrop(campaign.id);
+      
+      if (res.data.distributed) {
+        toast.success(res.data.distributionMessage || 'Bật phân bổ tự động và phân chia quỹ thành công', { id: toastId, duration: 5000 });
+      } else if (!isCurrentlyEnabled && res.data.distributionError) {
+        toast.error('Lỗi: ' + res.data.distributionError, { id: toastId, duration: 5000 });
+      } else {
+        toast.success(isCurrentlyEnabled ? 'Đã tắt phân bổ tự động' : 'Đã bật phân bổ tự động', { id: toastId, duration: 3000 });
+      }
+      
+      // Reload campaigns để button animation hiển thị đúng
       loadCampaigns();
     } catch (err) {
-      toast.error(err?.response?.data?.message || err?.response?.data?.error || err.message || 'Phân bổ thất bại', { id: toastId, duration: 5000 });
+      toast.error(err?.response?.data?.message || err?.response?.data?.error || err.message || 'Cập nhật thất bại', { id: toastId, duration: 5000 });
     } finally {
-      setDistributeLoading(false);
+      setAutoAirdropLoading(false);
     }
   };
 
   return (
     <div>
-      <h2 className="text-xl font-bold text-gray-800 mb-5">Tổng quan hệ thống</h2>
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-xl font-bold text-gray-800">Tổng quan hệ thống</h2>
+        <button 
+          onClick={handleRefresh}
+          disabled={refreshLoading}
+          className="flex items-center gap-2 px-3 h-9 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50">
+          {refreshLoading ? (
+            <>
+              <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Đang làm mới...
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Làm mới
+            </>
+          )}
+        </button>
+      </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <KpiCard label="Tổng Quỹ (token)" value={stats?.totalFund?.toLocaleString()} icon="💰" />
@@ -153,8 +173,8 @@ export default function AdminDashboard() {
               <tr>
                 <th className="text-left px-4 py-3 text-gray-600 font-medium">Khu vực</th>
                 <th className="text-right px-4 py-3 text-gray-600 font-medium">Tổng quỹ</th>
-                <th className="text-center px-4 py-3 text-gray-600 font-medium">Nhận quyên góp</th>
-                <th className="text-center px-4 py-3 text-gray-600 font-medium whitespace-nowrap">Hành động</th>
+                <th className="text-center px-4 py-3 text-gray-600 font-medium whitespace-nowrap">Nhận quyên góp</th>
+                <th className="text-center px-4 py-3 text-gray-600 font-medium whitespace-nowrap">Phân bổ tự động</th>
               </tr>
             </thead>
             <tbody>
@@ -171,17 +191,13 @@ export default function AdminDashboard() {
                     </button>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <button 
-                      onClick={() => handleDistributeClick(c)}
-                      disabled={distributeLoading}
-                      className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50">
-                      ⚡ Phân bổ quỹ
+                    <button onClick={() => handleToggleAutoAirdropClick(c)}
+                      disabled={autoAirdropLoading}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                        ${c.isAutoAirdrop !== false ? 'bg-blue-500' : 'bg-gray-300'}`}>
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                        ${c.isAutoAirdrop !== false ? 'translate-x-6' : 'translate-x-1'}`} />
                     </button>
-                    {(c.isAutoAirdrop || c.remaining === 0) && (
-                      <p className="text-[10px] mt-1 font-bold text-gray-400">
-                        {c.remaining === 0 ? '(Gần như hết quỹ)' : '(Đã thực thi mốc gần nhất)'}
-                      </p>
-                    )}
                   </td>
                 </tr>
               ))}
@@ -203,12 +219,52 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {distributingCamp && (
-        <ConfirmDistributeModal
-          campaign={distributingCamp}
-          onConfirm={handleConfirmDistribute}
-          onCancel={() => setDistributingCamp(null)}
-        />
+      {confirmingAutoAirdrop && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl">⚠️</span>
+              <h3 className="font-bold text-lg text-gray-800">
+                {confirmingAutoAirdrop.isAutoAirdrop ? 'Tắt' : 'Bật'} Phân bổ Tự động?
+              </h3>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5 text-sm text-blue-800 leading-relaxed">
+              {confirmingAutoAirdrop.isAutoAirdrop ? (
+                <>
+                  Bạn sắp <b>TẮT</b> phân bổ tự động cho khu vực <b>{confirmingAutoAirdrop.province}</b>.
+                  <br /><br />
+                  Sau này, tiền quyên góp sẽ chỉ cộng vào quỹ mà không tự động chia cho người dân.
+                </>
+              ) : (
+                <>
+                  Bạn sắp <b>BẬT</b> phân bổ tự động cho khu vực <b>{confirmingAutoAirdrop.province}</b>.
+                  <br /><br />
+                  <b>Hệ thống sẽ:</b>
+                  <br />
+                  1. Phân chia toàn bộ quỹ tồn đọng ({(confirmingAutoAirdrop.remaining || 0).toLocaleString()} token) cho người dân <b>NGAY BÂY GIỜ</b>
+                  <br />
+                  2. Những lần quyên góp sau sẽ tự động chia đều cho người dân
+                  <br /><br />
+                  <span className="text-blue-600 font-semibold">⛓ Lưu ý: Giao dịch trên Blockchain không thể hoàn tác.</span>
+                </>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={() => handleConfirmAutoAirdrop(confirmingAutoAirdrop)}
+                disabled={autoAirdropLoading}
+                className="flex-1 h-11 bg-blue-700 text-white rounded-xl font-semibold text-sm hover:bg-blue-800 transition-colors disabled:opacity-50">
+                {autoAirdropLoading ? 'Đang xử lý...' : 'Xác nhận'}
+              </button>
+              <button onClick={() => setConfirmingAutoAirdrop(null)}
+                disabled={autoAirdropLoading}
+                className="flex-1 h-11 bg-gray-100 text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-200 transition-colors disabled:opacity-50">
+                Huỷ bỏ
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
