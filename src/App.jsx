@@ -20,6 +20,7 @@ import CitizenLayout from './components/layout/CitizenLayout';
 import CitizenHome from './pages/citizen/CitizenHome';
 import CitizenScanner from './pages/citizen/CitizenScanner';
 import MyQR from './pages/citizen/MyQR';
+import DamageDashboard from './pages/citizen/DamageDashboard';
 
 // Shop
 import ShopLayout from './components/layout/ShopLayout';
@@ -74,11 +75,12 @@ export default function App() {
             <Route path="analytics" element={<Analytics />} />
           </Route>
 
-          {/* Citizen — chỉ Home + QR + Scanner */}
+          {/* Citizen — chỉ Home + QR + Scanner + Dashboard */}
           <Route path="/citizen" element={<ProtectedRoute allowedRoles={['CITIZEN']}><CitizenLayout /></ProtectedRoute>}>
             <Route index element={<CitizenHome />} />
             <Route path="scan" element={<CitizenScanner />} />
             <Route path="qr" element={<MyQR />} />
+            <Route path="damage-reports" element={<DamageDashboard />} />
           </Route>
 
           {/* Shop */}

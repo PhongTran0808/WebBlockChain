@@ -4,6 +4,7 @@ const tabs = [
   { to: '/citizen', label: 'Trang chủ', icon: '🏠', end: true },
   { to: '/citizen/scan', label: 'Quét Shop', icon: '📷' },
   { to: '/citizen/qr', label: 'Mã Của Tôi', icon: '📱' },
+  { to: '/citizen/damage-reports', label: 'Bảng Tin', icon: '📋' },
 ];
 
 export default function CitizenLayout() {

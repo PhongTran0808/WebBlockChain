@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { orderApi } from '../../api/orderApi';
+import { damageApi } from '../../api/damageApi';
 import QrScanner from '../../components/ui/QrScanner';
 import PinModal from '../../components/ui/PinModal';
 import ErrorFlash from '../../components/ui/ErrorFlash';
@@ -12,27 +13,33 @@ import ConfettiEffect from '../../components/ui/ConfettiEffect';
  *           → gọi markPickup → status: PENDING/READY → IN_TRANSIT
  * STEP 2 — Quét QR wallet citizen khi giao hàng
  *           → citizen nhập PIN → gọi confirmDelivery → status: DELIVERED
+ * STEP 3 — (Mới) Khảo sát thiệt hại sau bão (cho riêng Citizen này)
  */
 
 const STEPS = {
-  IDLE: 'idle',           // chưa làm gì
-  SCAN_ORDER: 'scan_order',   // đang quét QR đơn hàng (tại shop)
-  PICKUP_DONE: 'pickup_done', // đã lấy hàng, chờ đến nhà dân
-  SCAN_CITIZEN: 'scan_citizen', // đang quét QR citizen
-  PIN: 'pin',             // citizen nhập PIN
-  SUCCESS: 'success',     // giao thành công
+  IDLE: 'idle',
+  SCAN_ORDER: 'scan_order',
+  PICKUP_DONE: 'pickup_done',
+  SCAN_CITIZEN: 'scan_citizen',
+  PIN: 'pin',
+  DAMAGE_SURVEY: 'damage_survey',
+  SUCCESS: 'success',
 };
 
 export default function DeliveryScanner() {
   const [step, setStep] = useState(STEPS.IDLE);
-  const [currentOrder, setCurrentOrder] = useState(null);   // order đang xử lý
+  const [currentOrder, setCurrentOrder] = useState(null);
   const [scannedWallet, setScannedWallet] = useState(null);
   const [errorFlash, setErrorFlash] = useState(0);
   const [confetti, setConfetti] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [inTransitOrders, setInTransitOrders] = useState([]);
 
-  // Load đơn đang IN_TRANSIT của TNV này
+  // Survey states
+  const [damageLevel, setDamageLevel] = useState(null);
+  const [evidenceFile, setEvidenceFile] = useState(null);
+  const [surveyProcessing, setSurveyProcessing] = useState(false);
+
   const loadInTransit = useCallback(() => {
     orderApi.getOrders()
       .then(r => setInTransitOrders(r.data.filter(o => o.status === 'IN_TRANSIT')))
@@ -43,11 +50,8 @@ export default function DeliveryScanner() {
 
   const vibrate = (pattern = [200]) => navigator.vibrate?.(pattern);
 
-  // ── BƯỚC 1: Quét QR đơn hàng tại shop ──────────────────────────────────
   const handleScanOrder = async (qrText) => {
     if (processing) return;
-
-    // QR đơn hàng encode dạng: "ORDER:{orderId}" hoặc chỉ là số orderId
     let orderId = null;
     if (qrText.startsWith('ORDER:')) {
       orderId = parseInt(qrText.replace('ORDER:', ''), 10);
@@ -79,7 +83,6 @@ export default function DeliveryScanner() {
     }
   };
 
-  // ── BƯỚC 2: Quét QR wallet citizen ──────────────────────────────────────
   const handleScanCitizen = (walletAddress) => {
     if (!walletAddress || walletAddress.length < 10) {
       toast.error('QR không hợp lệ');
@@ -90,41 +93,77 @@ export default function DeliveryScanner() {
     setStep(STEPS.PIN);
   };
 
-  // ── Citizen nhập PIN → xác nhận giao hàng ───────────────────────────────
   const handlePinConfirm = async (pin) => {
     const order = currentOrder;
     if (!order) return;
 
-    setStep(STEPS.IDLE);
     setProcessing(true);
     try {
       await orderApi.confirmDelivery(order.id, {
         citizenPin: pin,
         qrData: scannedWallet,
       });
+      // Giao thành công, chuyển sang màn hình khảo sát thiệt hại
+      setStep(STEPS.DAMAGE_SURVEY);
+      setDamageLevel(1); // Default mức 1
+      setEvidenceFile(null);
       setConfetti(true);
-      setStep(STEPS.SUCCESS);
-      setCurrentOrder(null);
-      setScannedWallet(null);
       loadInTransit();
     } catch (err) {
       const msg = err?.response?.data?.message || 'Xác nhận thất bại';
       toast.error(msg);
       vibrate([200, 100, 200]);
       setErrorFlash(n => n + 1);
-      setStep(STEPS.SCAN_CITIZEN); // quay lại quét
+      setStep(STEPS.SCAN_CITIZEN);
     } finally {
       setProcessing(false);
     }
+  };
+
+  const handleSurveySubmit = async () => {
+    if (damageLevel >= 2 && !evidenceFile) {
+      toast.error('Mức độ thiệt hại 2 và 3 bắt buộc phải đính kèm ảnh chụp hiện trường!');
+      return;
+    }
+
+    setSurveyProcessing(true);
+    try {
+      const formData = new FormData();
+      formData.append('citizenId', currentOrder.citizenId);
+      formData.append('damageLevel', damageLevel);
+      if (evidenceFile) {
+        formData.append('file', evidenceFile);
+      }
+
+      await damageApi.assessDamage(formData);
+      toast.success('Ghi nhận khảo sát thiệt hại thành công!');
+      
+      // Hoàn thành luồng
+      setStep(STEPS.SUCCESS);
+      setCurrentOrder(null);
+      setScannedWallet(null);
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'Gửi khảo sát thất bại';
+      toast.error(msg);
+    } finally {
+      setSurveyProcessing(false);
+    }
+  };
+
+  const handleSurveySkip = () => {
+    setStep(STEPS.SUCCESS);
+    setCurrentOrder(null);
+    setScannedWallet(null);
   };
 
   const reset = () => {
     setStep(STEPS.IDLE);
     setCurrentOrder(null);
     setScannedWallet(null);
+    setDamageLevel(null);
+    setEvidenceFile(null);
   };
 
-  // ── Chọn đơn IN_TRANSIT từ danh sách để tiếp tục giao ───────────────────
   const resumeOrder = (order) => {
     setCurrentOrder(order);
     setStep(STEPS.SCAN_CITIZEN);
@@ -133,7 +172,7 @@ export default function DeliveryScanner() {
   return (
     <div className="p-4 max-w-lg mx-auto">
       <ErrorFlash trigger={errorFlash} />
-      <ConfettiEffect show={confetti} onDone={() => { setConfetti(false); setStep(STEPS.IDLE); }} />
+      <ConfettiEffect show={confetti} onDone={() => { setConfetti(false); }} />
 
       {/* ── IDLE: Màn hình chọn hành động ── */}
       {step === STEPS.IDLE && (
@@ -158,7 +197,6 @@ export default function DeliveryScanner() {
             </button>
           </div>
 
-          {/* Đơn đang IN_TRANSIT */}
           {inTransitOrders.length > 0 && (
             <div>
               <p className="text-sm font-semibold text-gray-600 mb-2">Đơn đang giao ({inTransitOrders.length})</p>
@@ -277,15 +315,91 @@ export default function DeliveryScanner() {
         />
       )}
 
+      {/* ── DAMAGE SURVEY: Khảo sát thiệt hại sau bão ── */}
+      {step === STEPS.DAMAGE_SURVEY && currentOrder && (
+        <div className="animate-fade-in">
+          <div className="flex items-center gap-3 mb-6">
+            <h2 className="text-xl font-bold text-gray-800">Lấy Khảo Sát Thiệt Hại (Tùy chọn)</h2>
+          </div>
+          
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-4 space-y-4">
+            <p className="text-sm text-gray-600 mb-2">Đánh giá chung tình hình của người dân <b>{currentOrder.citizenName}</b> sau bão.</p>
+
+            {/* Mức 1 */}
+            <div 
+              onClick={() => setDamageLevel(1)}
+              className={`p-3 rounded-xl border-2 cursor-pointer transition-colors ${damageLevel === 1 ? 'border-blue-600 bg-blue-50' : 'border-gray-200'}`}>
+              <div className="flex items-center gap-2 font-bold mb-1">
+                <input type="radio" checked={damageLevel === 1} readOnly className="w-4 h-4 text-blue-600" />
+                <span className={damageLevel === 1 ? 'text-blue-700' : 'text-gray-800'}>Mức 1 - Rất Nhẹ</span>
+              </div>
+              <p className="text-xs text-gray-500 pl-6">Ngập nhẹ, kết cấu nhà an toàn (Không cần chụp ảnh).</p>
+            </div>
+
+            {/* Mức 2 */}
+            <div 
+              onClick={() => setDamageLevel(2)}
+              className={`p-3 rounded-xl border-2 cursor-pointer transition-colors ${damageLevel === 2 ? 'border-orange-500 bg-orange-50' : 'border-gray-200'}`}>
+              <div className="flex items-center gap-2 font-bold mb-1">
+                <input type="radio" checked={damageLevel === 2} readOnly className="w-4 h-4 text-orange-500" />
+                <span className={damageLevel === 2 ? 'text-orange-700' : 'text-gray-800'}>Mức 2 - Thiệt hại nặng</span>
+              </div>
+              <p className="text-xs text-gray-500 pl-6">Nhà ngập sâu, hư hỏng đồ đạc lớn, tốc mái một phần (Bắt buộc đính kèm ảnh).</p>
+            </div>
+
+            {/* Mức 3 */}
+            <div 
+              onClick={() => setDamageLevel(3)}
+              className={`p-3 rounded-xl border-2 cursor-pointer transition-colors ${damageLevel === 3 ? 'border-red-600 bg-red-50' : 'border-gray-200'}`}>
+              <div className="flex items-center gap-2 font-bold mb-1">
+                <input type="radio" checked={damageLevel === 3} readOnly className="w-4 h-4 text-red-600" />
+                <span className={damageLevel === 3 ? 'text-red-700' : 'text-gray-800'}>Mức 3 - Đặc biệt nghiêm trọng</span>
+              </div>
+              <p className="text-xs text-gray-500 pl-6">Nhà sập hoàn toàn, mất trắng tài sản, nguy cơ sạt lở (Bắt buộc đính kèm ảnh).</p>
+            </div>
+
+            {/* File đính kèm */}
+            <div className="pt-3 border-t border-gray-100 flex flex-col gap-2">
+                <label className="text-sm font-semibold text-gray-700">
+                  Hình ảnh bằng chứng {damageLevel >= 2 && <span className="text-red-500 font-bold">*</span>}
+                </label>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  capture="environment" // Hỗ trợ điện thoại bật camera ngay
+                  onChange={(e) => setEvidenceFile(e.target.files[0])}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+            </div>
+            
+          </div>
+
+          <div className="flex gap-3">
+            <button 
+              onClick={handleSurveySkip}
+              disabled={surveyProcessing}
+              className="flex-1 py-3 bg-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-300">
+              Bỏ qua
+            </button>
+            <button 
+              onClick={handleSurveySubmit}
+              disabled={surveyProcessing}
+              className="flex-1 py-3 bg-blue-700 text-white font-semibold rounded-xl hover:bg-blue-800 disabled:opacity-50">
+              {surveyProcessing ? 'Đang gửi...' : 'Gửi Nhận Xét'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── SUCCESS ── */}
       {step === STEPS.SUCCESS && (
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center text-4xl">✅</div>
-          <h2 className="text-xl font-bold text-gray-800">Giao hàng thành công!</h2>
-          <p className="text-sm text-gray-500 text-center">Token đã được mở khóa và chuyển vào ví shop</p>
+          <h2 className="text-xl font-bold text-gray-800">Hoàn Tất Toàn Bộ!</h2>
+          <p className="text-sm text-gray-500 text-center">Token đã được mở khóa và chuyển vào ví shop. Khảo sát đã được ghi nhận.</p>
           <button onClick={reset}
             className="mt-4 px-8 h-12 bg-blue-700 text-white rounded-2xl font-semibold hover:bg-blue-800 transition-colors">
-            Giao đơn tiếp theo
+            Về trang chủ
           </button>
         </div>
       )}
