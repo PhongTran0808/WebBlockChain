@@ -206,8 +206,8 @@ Username là số CCCD 15 chữ số. Mật khẩu tất cả là `123456`.
 | `001234567890078` | Nguyễn Văn 78 | Đồng Nai |
 | `001234567890079` | Nguyễn Văn 79 | Đồng Nai |
 
-1111111111 | Nguyen Van Mot | Cà Mau     (15 số 1)
 
+444444444444444 Nguyen Van Bon | Binh Duong
 
 
 Dashboard: `/citizen` — Xem số dư token, hiển thị mã QR, đặt hàng tại ReliefMart.

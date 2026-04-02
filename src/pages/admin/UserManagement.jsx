@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { adminApi } from '../../api/adminApi';
 
@@ -36,56 +36,28 @@ function exportCSV(users) {
   URL.revokeObjectURL(url);
 }
 
-// Modal set wallet address
-function WalletModal({ user, onClose, onSaved }) {
-  const [wallet, setWallet] = useState(user.walletAddress || '');
-  const [saving, setSaving] = useState(false);
-  const isValid = /^0x[0-9a-fA-F]{40}$/.test(wallet);
+// Auto-assign wallet button
+function AutoWalletButton({ user, onAssigned }) {
+  const [loading, setLoading] = useState(false);
 
-  const handleSave = async () => {
-    if (!isValid) { toast.error('Địa chỉ ví không đúng định dạng'); return; }
-    setSaving(true);
+  const handleClick = async () => {
+    setLoading(true);
     try {
-      const res = await adminApi.setWalletAddress(user.id, wallet);
-      toast.success(`Đã cập nhật ví cho ${user.fullName}`);
-      onSaved(res.data);
+      const res = await adminApi.autoAssignWallet(user.id);
+      toast.success(`Đã cấp ví cho ${user.fullName}`);
+      onAssigned(res.data);
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Cập nhật thất bại');
+      toast.error(err?.response?.data?.message || 'Cấp ví thất bại');
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-        <h3 className="font-bold text-lg mb-1">Cập nhật ví Blockchain</h3>
-        <p className="text-sm text-gray-500 mb-4">
-          {user.fullName} ({user.role})
-        </p>
-        <input
-          value={wallet}
-          onChange={e => setWallet(e.target.value.trim())}
-          placeholder="0x1234...abcd (42 ký tự)"
-          className={`w-full border rounded-xl px-3 h-11 text-sm font-mono focus:outline-none focus:ring-2 mb-1
-            ${wallet && !isValid ? 'border-red-400 focus:ring-red-400' : 'focus:ring-blue-500'}`}
-        />
-        {wallet && !isValid && (
-          <p className="text-xs text-red-500 mb-3">Phải bắt đầu bằng 0x và có đúng 42 ký tự</p>
-        )}
-        {!wallet && <p className="text-xs text-gray-400 mb-3">Nhập địa chỉ ví Ethereum/Polygon</p>}
-        <div className="flex gap-3 mt-4">
-          <button onClick={handleSave} disabled={saving || !isValid}
-            className="flex-1 h-11 bg-blue-700 text-white rounded-xl font-semibold text-sm disabled:opacity-50">
-            {saving ? 'Đang lưu...' : 'Lưu địa chỉ ví'}
-          </button>
-          <button onClick={onClose}
-            className="flex-1 h-11 bg-gray-100 text-gray-700 rounded-xl font-medium text-sm">
-            Huỷ
-          </button>
-        </div>
-      </div>
-    </div>
+    <button onClick={handleClick} disabled={loading}
+      className="text-xs text-white bg-blue-600 px-2 py-1 rounded hover:bg-blue-700 transition-colors font-medium disabled:opacity-50">
+      {loading ? '...' : 'Cấp Ví'}
+    </button>
   );
 }
 
@@ -94,7 +66,6 @@ export default function UserManagement() {
   const [roleFilter, setRoleFilter] = useState('ALL');
   const [approvedFilter, setApprovedFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [walletModal, setWalletModal] = useState(null); // user object hoặc null
   const debouncedSearch = useDebounce(searchQuery, 500);
 
   useEffect(() => {
@@ -172,6 +143,20 @@ export default function UserManagement() {
           className="ml-auto px-4 h-10 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex items-center gap-1.5">
           <span>📥</span> Xuất Excel
         </button>
+        <button
+          onClick={async () => {
+            if (!window.confirm('Cấp ví tự động cho tất cả SHOP/TNV chưa có ví?')) return;
+            try {
+              const res = await adminApi.bulkAssignWallets();
+              toast.success(res.data.message);
+              adminApi.getUsers({}).then(r => setUsers(r.data)).catch(() => {});
+            } catch (err) {
+              toast.error(err?.response?.data?.message || 'Thất bại');
+            }
+          }}
+          className="px-4 h-10 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors flex items-center gap-1.5">
+          <span>🔑</span> Cấp ví hàng loạt
+        </button>
       </div>
 
       {/* Table */}
@@ -199,21 +184,15 @@ export default function UserManagement() {
                 <td className="px-4 py-3 text-gray-500">{u.province || '—'}</td>
                 <td className="px-4 py-3">
                   {u.walletAddress ? (
-                    <button onClick={() => setWalletModal(u)}
-                      className="font-mono text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded hover:bg-green-100 transition-colors max-w-[120px] truncate block"
+                    <span className="font-mono text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded max-w-[120px] truncate block"
                       title={u.walletAddress}>
                       ✅ {u.walletAddress.slice(0, 8)}...
-                    </button>
+                    </span>
                   ) : (
-                    // Chỉ SHOP và TRANSPORTER mới cần ví để tham gia luồng blockchain
-                    (u.role === 'SHOP' || u.role === 'TRANSPORTER') ? (
-                      <button onClick={() => setWalletModal(u)}
-                        className="text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded hover:bg-red-100 transition-colors font-medium">
-                        ⚠️ Chưa có ví
-                      </button>
-                    ) : (
-                      <span className="text-xs text-gray-400">—</span>
-                    )
+                    <AutoWalletButton
+                      user={u}
+                      onAssigned={(updated) => setUsers(prev => prev.map(x => x.id === updated.id ? updated : x))}
+                    />
                   )}
                 </td>
                 <td className="px-4 py-3">
@@ -237,18 +216,6 @@ export default function UserManagement() {
       <p className="text-xs text-gray-400 mt-2 text-right">
         Hiển thị {filtered.length} / {users.length} người dùng
       </p>
-
-      {/* Modal set wallet */}
-      {walletModal && (
-        <WalletModal
-          user={walletModal}
-          onClose={() => setWalletModal(null)}
-          onSaved={(updated) => {
-            setUsers(prev => prev.map(u => u.id === updated.id ? updated : u));
-            setWalletModal(null);
-          }}
-        />
-      )}
     </div>
   );
 }

@@ -49,11 +49,16 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const updateWallet = (newAddress) => {
+    setUser(prev => prev ? { ...prev, walletAddress: newAddress } : prev);
+  };
+
   const value = useMemo(() => ({ 
     user, 
     token, 
     login, 
-    logout 
+    logout,
+    updateWallet
   }), [user, token]);
 
   return (

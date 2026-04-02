@@ -28,4 +28,8 @@ export const adminApi = {
   syncProvinces: () => axiosClient.post('/api/admin/campaigns/sync-provinces'),
   // Fix dữ liệu ví bị ghi đè bởi mã chiến dịch
   fixWalletData: () => axiosClient.post('/api/admin/users/fix-wallet-data'),
+  // Cấp ví tự động cho 1 user cụ thể
+  autoAssignWallet: (id) => axiosClient.post(`/api/admin/users/${id}/auto-wallet`),
+  // Cấp ví hàng loạt cho tất cả SHOP/TRANSPORTER chưa có ví
+  bulkAssignWallets: () => axiosClient.post('/api/admin/users/bulk-assign-wallets'),
 };

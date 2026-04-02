@@ -197,7 +197,7 @@ export default function TransactionHistory() {
                                         </a>
                                     ) : (
                                         <span className="text-xs text-gray-400 font-mono italic">
-                                            {tx.txHash ? shortHash(tx.txHash) : 'Trạng thái lưu trữ Off-chain'}
+                                            {tx.txHash ? shortHash(tx.txHash) : 'Đang đợi Smart Contract'}
                                         </span>
                                     )}
                                 </td>
