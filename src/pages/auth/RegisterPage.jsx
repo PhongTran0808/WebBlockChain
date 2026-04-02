@@ -107,9 +107,15 @@ export default function RegisterPage() {
               {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
 
-            <input placeholder="Mã chiến dịch (tuỳ chọn)" value={form.walletAddress}
-              onChange={e => setForm(f => ({...f, walletAddress: e.target.value}))}
-              className="w-full border rounded-xl px-4 h-12 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            {form.role === 'CITIZEN' ? (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-xs text-blue-700">
+                ℹ️ Mã ví sẽ được tạo tự động cho tài khoản của bạn
+              </div>
+            ) : (
+              <input placeholder="Mã chiến dịch (tuỳ chọn)" value={form.walletAddress}
+                onChange={e => setForm(f => ({...f, walletAddress: e.target.value}))}
+                className="w-full border rounded-xl px-4 h-12 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            )}
 
             {(form.role === 'SHOP' || form.role === 'TRANSPORTER') && (
               <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700">
