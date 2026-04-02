@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import GlobalErrorBoundary from './components/GlobalErrorBoundary';
 
 // Auth
 import LoginPage from './pages/auth/LoginPage';
@@ -43,6 +44,7 @@ import StandaloneSurvey from './pages/transporter/StandaloneSurvey';
 // Common
 import TransactionHistory from './pages/TransactionHistory';
 import TransparencyPortal from './pages/TransparencyPortal';
+import ProvinceReport from './pages/ProvinceReport';
 
 function ProtectedRoute({ children, allowedRoles }) {
   const { user } = useAuth();
@@ -60,14 +62,16 @@ function RoleRedirect() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
+    <GlobalErrorBoundary>
+      <AuthProvider>
+        <BrowserRouter>
         <Toaster position="top-center" />
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/" element={<RoleRedirect />} />
           <Route path="/transparency" element={<TransparencyPortal />} />
+          <Route path="/reports" element={<ProvinceReport />} />
           <Route path="/history" element={<ProtectedRoute><TransactionHistory /></ProtectedRoute>} />
 
           {/* Admin */}
@@ -109,6 +113,7 @@ export default function App() {
           </Route>
         </Routes>
       </BrowserRouter>
-    </AuthProvider>
+      </AuthProvider>
+    </GlobalErrorBoundary>
   );
 }

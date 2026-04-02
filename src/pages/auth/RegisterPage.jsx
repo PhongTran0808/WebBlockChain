@@ -88,7 +88,7 @@ export default function RegisterPage() {
 
         {step === 1 && (
           <div className="space-y-3">
-            <input placeholder="Tên đăng nhập *" value={form.username}
+            <input placeholder={form.role === 'CITIZEN' ? "CCCD (đảm bảo có đủ 15 số) *" : "Tên đăng nhập *"} value={form.username}
               onChange={e => setForm(f => ({...f, username: e.target.value}))}
               className="w-full border rounded-xl px-4 h-12 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
 
@@ -107,9 +107,9 @@ export default function RegisterPage() {
               {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
 
-            <input placeholder="Địa chỉ ví Blockchain (tuỳ chọn)" value={form.walletAddress}
+            <input placeholder="Mã chiến dịch (tuỳ chọn)" value={form.walletAddress}
               onChange={e => setForm(f => ({...f, walletAddress: e.target.value}))}
-              className="w-full border rounded-xl px-4 h-12 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="w-full border rounded-xl px-4 h-12 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
 
             {(form.role === 'SHOP' || form.role === 'TRANSPORTER') && (
               <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700">
@@ -119,7 +119,15 @@ export default function RegisterPage() {
 
             <button
               onClick={() => {
-                if (!form.username.trim()) { toast.error('Nhập tên đăng nhập'); return; }
+                const uname = form.username.trim();
+                if (!uname) { 
+                  toast.error(form.role === 'CITIZEN' ? 'Vui lòng nhập CCCD' : 'Nhập tên đăng nhập'); 
+                  return; 
+                }
+                if (form.role === 'CITIZEN' && !/^\d{15}$/.test(uname)) {
+                  toast.error('CCCD phải bao gồm đúng 15 số');
+                  return;
+                }
                 setStep(2);
               }}
               className="w-full h-12 bg-blue-700 text-white rounded-xl font-semibold">

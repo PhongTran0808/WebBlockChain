@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import QrScanner from '../../components/ui/QrScanner';
 import ErrorFlash from '../../components/ui/ErrorFlash';
 import { damageApi } from '../../api/damageApi';
+import { useQRScanner } from '../../hooks/useQRScanner';
 
 export default function StandaloneSurvey() {
   const [surveyingWallet, setSurveyingWallet] = useState(null);
@@ -12,8 +13,8 @@ export default function StandaloneSurvey() {
   const [errorFlash, setErrorFlash] = useState(0);
   const processingRef = useRef(false);
 
-  // SCANNED
-  const handleScanCitizen = (walletAddress) => {
+  // SCANNED inner logic
+  const handleScanCitizenInner = (walletAddress) => {
     if (processingRef.current) return;
     processingRef.current = true;
     
@@ -22,6 +23,9 @@ export default function StandaloneSurvey() {
     setDamageLevel(1);
     setEvidenceFile(null);
   };
+
+  // Sử dụng hook chống dội
+  const { handleScan } = useQRScanner(handleScanCitizenInner);
 
   // CLOSE / SKIP
   const handleCloseSurvey = () => {
@@ -67,7 +71,7 @@ export default function StandaloneSurvey() {
 
       {!surveyingWallet ? (
         <div className="bg-white rounded-2xl p-4 shadow border border-gray-100 mb-6">
-          <QrScanner onSuccess={handleScanCitizen} onError={() => setErrorFlash(n => n + 1)} delay={500} />
+          <QrScanner onSuccess={handleScan} onError={() => setErrorFlash(n => n + 1)} delay={500} />
           <p className="text-center text-gray-500 mt-4 text-sm tracking-tight">Hướng Camera vào ví cá nhân của người dân</p>
         </div>
       ) : (

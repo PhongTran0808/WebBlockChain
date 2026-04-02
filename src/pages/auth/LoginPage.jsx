@@ -19,7 +19,7 @@ export default function LoginPage() {
   };
 
   const handleLogin = async () => {
-    if (!username.trim()) { toast.error('Vui lòng nhập tên đăng nhập'); return; }
+    if (!username.trim()) { toast.error('Vui lòng nhập tên đăng nhập hoặc CCCD'); return; }
     if (pin.length < 6) { toast.error('PIN phải đủ 6 số'); return; }
     setLoading(true);
     try {
@@ -44,7 +44,7 @@ export default function LoginPage() {
         {/* Username */}
         <input
           type="text"
-          placeholder="Tên đăng nhập"
+          placeholder="Tên đăng nhập / CCCD"
           value={username}
           onChange={e => setUsername(e.target.value)}
           className="w-full border border-gray-300 rounded-xl px-4 h-12 text-base mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"

@@ -7,6 +7,7 @@ import QrScanner from '../../components/ui/QrScanner';
 import PinModal from '../../components/ui/PinModal';
 import ErrorFlash from '../../components/ui/ErrorFlash';
 import ConfettiEffect from '../../components/ui/ConfettiEffect';
+import { useQRScanner } from '../../hooks/useQRScanner';
 
 /**
  * Luồng 2 bước:
@@ -62,10 +63,7 @@ export default function DeliveryScanner() {
     }
 
     if (!orderId || isNaN(orderId)) {
-      toast.error('QR không hợp lệ — cần quét mã đơn hàng');
-      vibrate([100, 50, 100]);
-      setErrorFlash(n => n + 1);
-      return;
+      return; // Hook đã show lỗi
     }
 
     setProcessing(true);
@@ -85,15 +83,26 @@ export default function DeliveryScanner() {
     }
   };
 
-  const handleScanCitizen = (walletAddress) => {
-    if (!walletAddress || walletAddress.length < 10) {
-      toast.error('QR không hợp lệ');
-      setErrorFlash(n => n + 1);
-      return;
+  const { handleScan: handleScanOrderSafe } = useQRScanner(
+    handleScanOrder,
+    (data) => {
+      if (data.startsWith('ORDER:') || /^\d+$/.test(data.trim())) return [true, ''];
+      return [false, 'QR không hợp lệ — cần quét mã đơn hàng'];
     }
+  );
+
+  const handleScanCitizen = (walletAddress) => {
     setScannedWallet(walletAddress);
     setStep(STEPS.PIN);
   };
+  
+  const { handleScan: handleScanCitizenSafe } = useQRScanner(
+    handleScanCitizen,
+    (data) => {
+      if (data && data.length >= 10) return [true, ''];
+      return [false, 'QR Ví không hợp lệ!'];
+    }
+  );
 
   const handlePinConfirm = async (pin) => {
     const order = currentOrder;
@@ -247,7 +256,7 @@ export default function DeliveryScanner() {
             </div>
           ) : (
             <QrScanner
-              onSuccess={handleScanOrder}
+              onSuccess={handleScanOrderSafe}
               onError={() => setErrorFlash(n => n + 1)}
             />
           )}
@@ -305,7 +314,7 @@ export default function DeliveryScanner() {
           </div>
 
           <QrScanner
-            onSuccess={handleScanCitizen}
+            onSuccess={handleScanCitizenSafe}
             onError={() => setErrorFlash(n => n + 1)}
           />
         </div>

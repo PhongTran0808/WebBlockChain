@@ -60,15 +60,23 @@ export default function BatchApproval() {
   const [processing, setProcessing] = useState(null);
   const [detailBatch, setDetailBatch] = useState(null);
 
-  const load = useCallback(() => {
-    setLoading(true);
-    batchApi.getShopAll()
-      .then(r => setBatches(r.data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+  const load = useCallback(async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
+    try {
+      const r = await batchApi.getShopAll();
+      setBatches(r.data);
+    } catch (err) {
+      if (!isSilent) toast.error('Không thể tải danh sách lô hàng');
+    } finally {
+      if (!isSilent) setLoading(false);
+    }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    const timer = setInterval(() => load(true), 30000);
+    return () => clearInterval(timer);
+  }, [load]);
 
   const handleAccept = async (id) => {
     setProcessing(id);
