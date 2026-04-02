@@ -27,10 +27,11 @@ const KEYS = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
 
 export default function RegisterPage() {
   const [step, setStep] = useState(1); // 1: info, 2: pin
+  // form state KHÔNG chứa walletAddress — ví được admin set riêng sau khi duyệt
   const [form, setForm] = useState({
-    username: '', fullName: '', role: 'CITIZEN',
-    province: '', walletAddress: '',
+    username: '', fullName: '', role: 'CITIZEN', province: '',
   });
+  const [campaignCode, setCampaignCode] = useState(''); // mã chiến dịch — chỉ dùng cho CITIZEN
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [pinStep, setPinStep] = useState('set'); // 'set' | 'confirm'
@@ -64,9 +65,17 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
+      // Payload gửi lên: walletAddress KHÔNG được gửi từ form đăng ký
+      // — ví của CITIZEN được tạo bởi seeder/admin
+      // — ví của SHOP/TRANSPORTER được admin set riêng sau khi duyệt
       await axiosClient.post('/api/auth/register', {
-        ...form,
-        password: pin,
+        username:     form.username.trim(),
+        fullName:     form.fullName.trim(),
+        role:         form.role,
+        province:     form.province,
+        password:     pin,
+        campaignCode: form.role === 'CITIZEN' ? campaignCode : undefined,
+        // walletAddress: KHÔNG gửi — tuyệt đối không để field này trong payload
       });
       toast.success('Đăng ký thành công! Vui lòng đăng nhập.');
       navigate('/login');
@@ -108,14 +117,18 @@ export default function RegisterPage() {
             </select>
 
             {form.role === 'CITIZEN' ? (
-              <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-xs text-blue-700">
-                ℹ️ Mã ví sẽ được tạo tự động cho tài khoản của bạn
+              <div className="space-y-2">
+                <input
+                  placeholder="Mã chiến dịch cứu trợ *"
+                  value={campaignCode}
+                  onChange={e => setCampaignCode(e.target.value.trim())}
+                  className="w-full border rounded-xl px-4 h-12 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5 text-xs text-blue-700">
+                  ℹ️ Mã do tỉnh cung cấp trong đợt tuyên truyền. Địa chỉ ví sẽ được tạo tự động.
+                </div>
               </div>
-            ) : (
-              <input placeholder="Mã chiến dịch (tuỳ chọn)" value={form.walletAddress}
-                onChange={e => setForm(f => ({...f, walletAddress: e.target.value}))}
-                className="w-full border rounded-xl px-4 h-12 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            )}
+            ) : null}
 
             {(form.role === 'SHOP' || form.role === 'TRANSPORTER') && (
               <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700">
@@ -130,14 +143,24 @@ export default function RegisterPage() {
                   toast.error(form.role === 'CITIZEN' ? 'Vui lòng nhập CCCD' : 'Nhập tên đăng nhập'); 
                   return; 
                 }
-                // Extract only digits from input (remove spaces, hyphens, etc)
                 const digitOnly = uname.replace(/\D/g, '');
                 if (form.role === 'CITIZEN' && (digitOnly.length < 10 || digitOnly.length > 20)) {
                   toast.error('CCCD phải có từ 10-20 số');
                   return;
                 }
+                // Validate mã chiến dịch cho CITIZEN (bắt buộc)
+                if (form.role === 'CITIZEN') {
+                  if (!campaignCode) {
+                    toast.error('Vui lòng nhập mã chiến dịch');
+                    return;
+                  }
+                  // Mã hợp lệ hiện tại là 123456 (do tỉnh cấp)
+                  if (campaignCode !== '123456') {
+                    toast.error('Mã chiến dịch không hợp lệ. Vui lòng liên hệ chính quyền địa phương.');
+                    return;
+                  }
+                }
                 setStep(2);
-                
               }}
               className="w-full h-12 bg-blue-700 text-white rounded-xl font-semibold">
               Tiếp theo →

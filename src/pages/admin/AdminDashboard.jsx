@@ -59,6 +59,7 @@ export default function AdminDashboard() {
   const handleToggle = async (id) => {
     try {
       const res = await adminApi.toggleCampaign(id);
+      // toggleCampaign giờ trả về cùng format province-stats
       setCampaigns(prev => prev.map(c => c.id === id ? res.data : c));
       toast.success('Đã cập nhật trạng thái nhận quyên góp');
     } catch { toast.error('Cập nhật thất bại'); }
@@ -166,7 +167,22 @@ export default function AdminDashboard() {
       )}
 
       {tab === 1 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div>
+          {/* Nút đồng bộ tỉnh mới */}
+          <div className="flex justify-end mb-3">
+            <button
+              onClick={async () => {
+                try {
+                  const res = await adminApi.syncProvinces();
+                  toast.success(res.data.message);
+                  loadCampaigns();
+                } catch { toast.error('Đồng bộ thất bại'); }
+              }}
+              className="px-4 h-9 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2">
+              🔄 Đồng bộ tỉnh mới
+            </button>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[400px]">
             <thead className="bg-gray-50">
@@ -203,6 +219,7 @@ export default function AdminDashboard() {
               ))}
             </tbody>
           </table>
+          </div>
           </div>
         </div>
       )}

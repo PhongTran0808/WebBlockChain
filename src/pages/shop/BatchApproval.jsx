@@ -5,11 +5,12 @@ import { batchApi } from '../../api/batchApi';
 import { useAuth } from '../../context/AuthContext';
 
 const STATUS_META = {
-  WAITING_SHOP: { label: 'Chờ duyệt',       color: 'bg-amber-100 text-amber-700' },
-  ACCEPTED:     { label: 'Đã chấp nhận',     color: 'bg-blue-100 text-blue-700' },
-  PICKED_UP:    { label: 'TNV đã lấy',       color: 'bg-purple-100 text-purple-700' },
-  IN_PROGRESS:  { label: 'Đang phân phát',   color: 'bg-orange-100 text-orange-700' },
-  COMPLETED:    { label: 'Hoàn thành',       color: 'bg-green-100 text-green-700' },
+  WAITING_SHOP:     { label: 'Chờ duyệt',       color: 'bg-amber-100 text-amber-700' },
+  ACCEPTED:         { label: 'Đã chấp nhận',     color: 'bg-blue-100 text-blue-700' },
+  PICKED_UP:        { label: 'TNV đã lấy',       color: 'bg-purple-100 text-purple-700' },
+  IN_PROGRESS:      { label: 'Đang phân phát',   color: 'bg-orange-100 text-orange-700' },
+  COMPLETED:        { label: 'Hoàn thành',       color: 'bg-green-100 text-green-700' },
+  RETURNED_TO_SHOP: { label: '↩️ Lô được trả về', color: 'bg-gray-100 text-gray-700' },
 };
 
 /** QR inline với overlay dimmed khi đã lấy */

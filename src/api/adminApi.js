@@ -4,6 +4,8 @@ export const adminApi = {
   getStats: () => axiosClient.get('/api/admin/stats'),
   getUsers: (params) => axiosClient.get('/api/admin/users', { params }),
   toggleApprove: (id) => axiosClient.put(`/api/admin/users/${id}/approve`),
+  // Cập nhật địa chỉ ví blockchain cho user (shop/transporter/citizen)
+  setWalletAddress: (id, walletAddress) => axiosClient.put(`/api/admin/users/${id}/wallet`, { walletAddress }),
   getItems: () => axiosClient.get('/api/admin/items'),
   getPublicItems: () => axiosClient.get('/api/admin/items/public'),
   createItem: (data) => axiosClient.post('/api/admin/items', data),
@@ -22,4 +24,8 @@ export const adminApi = {
   resolveLostOrder: (id) => axiosClient.post(`/api/orders/${id}/resolve-lost`),
   getDisputedReports: () => axiosClient.get('/api/admin/damage-reports/disputed'),
   resolveDamageDispute: (id, acceptReport) => axiosClient.post(`/api/admin/damage-reports/${id}/resolve?acceptReport=${acceptReport}`),
+  // Đồng bộ tỉnh: tạo CampaignPool cho tỉnh có citizen nhưng chưa có pool
+  syncProvinces: () => axiosClient.post('/api/admin/campaigns/sync-provinces'),
+  // Fix dữ liệu ví bị ghi đè bởi mã chiến dịch
+  fixWalletData: () => axiosClient.post('/api/admin/users/fix-wallet-data'),
 };

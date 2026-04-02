@@ -20,4 +20,6 @@ export const batchApi = {
   getBatchById: (id) => axiosClient.get(`/api/batches/${id}`),
   acceptBatch: (id) => axiosClient.post(`/api/batches/${id}/accept`),
   rejectBatch: (id) => axiosClient.post(`/api/batches/${id}/reject`),
+  // TNV trả lô về Shop khi dân không đến nhận đủ
+  returnBatch: (id) => axiosClient.post(`/api/batches/${id}/return`),
 };

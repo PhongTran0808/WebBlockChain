@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { batchApi } from '../../api/batchApi';
 import { orderApi } from '../../api/orderApi';
-import { damageApi } from '../../api/damageApi';
 import QrScanner from '../../components/ui/QrScanner';
 import ConfettiEffect from '../../components/ui/ConfettiEffect';
 import ErrorFlash from '../../components/ui/ErrorFlash';
@@ -39,12 +38,6 @@ export default function BatchDelivery() {
   const [tab, setTab]                 = useState('available');
   const [detailBatch, setDetailBatch] = useState(null);
   const [refreshing, setRefreshing]   = useState(false);
-
-  // Survey states
-  const [surveyingWallet, setSurveyingWallet] = useState(null);
-  const [damageLevel, setDamageLevel] = useState(1);
-  const [evidenceFile, setEvidenceFile] = useState(null);
-  const [surveyProcessing, setSurveyProcessing] = useState(false);
 
   // Per-card scanner: batchId đang mở scanner
   const [scanningBatchId, setScanningBatchId] = useState(null);
@@ -104,7 +97,6 @@ export default function BatchDelivery() {
 
   // ── Quét QR Citizen phân phát ────────────────────────────────────────────
   const handleScanCitizen = async (walletAddress) => {
-    // Dùng ref (synchronous) để block duplicate calls — tránh race condition với React setState
     if (processingRef.current) return;
     if (!walletAddress || walletAddress.length < 10) {
       toast.error('QR không hợp lệ');
@@ -115,11 +107,17 @@ export default function BatchDelivery() {
     setProcessing(true);
     try {
       const res = await batchApi.deliverToOneCitizen(activeBatch.id, walletAddress);
-      setActiveBatch(res.data);
-      setSurveyingWallet(walletAddress);
-      setDamageLevel(1);
-      setEvidenceFile(null);
+      const updated = res.data;
+      setActiveBatch(updated);
       loadData();
+      // Kiểm tra lô đã phân phát hết chưa
+      if (updated.status === 'COMPLETED') {
+        setConfetti(true);
+        setStep(STEPS.SUCCESS);
+      } else {
+        const remaining = updated.totalPackages - updated.deliveredCount;
+        toast.success(`✅ Đã giao! Còn ${remaining} phần`);
+      }
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Phân phát thất bại');
       setErrorFlash(n => n + 1);
@@ -129,49 +127,24 @@ export default function BatchDelivery() {
     }
   };
 
-  const handleCloseSurvey = () => {
-    setSurveyingWallet(null);
-    setDamageLevel(1);
-    setEvidenceFile(null);
-    
-    if (activeBatch && activeBatch.status === 'COMPLETED') {
-      setConfetti(true);
-      setStep(STEPS.SUCCESS);
-    } else if (activeBatch) {
-      toast.success(`Đã kiểm tra xong! Còn ${activeBatch.totalPackages - activeBatch.deliveredCount} phần`);
-    }
-  };
-
-  const handleSubmitSurvey = async (e) => {
-    if (e) e.preventDefault();
-    if ((damageLevel === 2 || damageLevel === 3) && !evidenceFile) {
-      toast.error('Bắt buộc phải có ảnh hiện trường cho mức độ 2 và 3');
-      return;
-    }
-    setSurveyProcessing(true);
-    try {
-      const formData = new FormData();
-      formData.append('walletAddress', surveyingWallet);
-      formData.append('damageLevel', damageLevel);
-      if (evidenceFile) {
-        formData.append('file', evidenceFile);
-      }
-      await damageApi.assessDamageByWallet(formData);
-      toast.success('Đã gửi báo cáo thiệt hại thành công');
-      handleCloseSurvey();
-    } catch (err) {
-      toast.error('Gửi báo cáo thất bại');
-    } finally {
-      setSurveyProcessing(false);
-    }
-  };
-
   const inProgressBatches = myBatches.filter(b =>
     ['WAITING_SHOP','SHOP_REJECTED','ACCEPTED','PICKED_UP','IN_PROGRESS'].includes(b.status));
 
+  // ── Trả lô về Shop ────────────────────────────────────────────────────────
+  const handleReturnBatch = async (batchId) => {
+    if (!window.confirm('Xác nhận trả lô về Shop? Phần chưa phân phát sẽ được hoàn về quỹ tỉnh.')) return;
+    try {
+      const res = await batchApi.returnBatch(batchId);
+      toast.success('Đã trả lô về Shop thành công');
+      setMyBatches(prev => prev.map(b => b.id === batchId ? res.data : b));
+      loadData();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Trả lô thất bại');
+    }
+  };
+
   // ── Render badge + action cho từng lô trong tab "mine" ────────────────────
   function renderMyBatchCard(b) {
-    const isPickedUp = b.status === 'PICKED_UP' || b.status === 'IN_PROGRESS' || pickedUpIds.has(b.id);
     const isScanning = scanningBatchId === b.id;
     const progress = b.totalPackages > 0 ? (b.deliveredCount / b.totalPackages) * 100 : 0;
 
@@ -237,12 +210,18 @@ export default function BatchDelivery() {
           </div>
         )}
 
-        {/* PICKED_UP hoặc IN_PROGRESS → phân phát */}
+        {/* PICKED_UP hoặc IN_PROGRESS → phân phát + nút trả lô */}
         {(b.status === 'PICKED_UP' || b.status === 'IN_PROGRESS') && (
-          <button onClick={() => { setActiveBatch(b); setStep(STEPS.DELIVER); }}
-            className="w-full h-10 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 transition-colors mb-0">
-            🏠 Phân phát cho dân ({b.totalPackages - b.deliveredCount} còn lại)
-          </button>
+          <div className="space-y-1.5 mb-0">
+            <button onClick={() => { setActiveBatch(b); setStep(STEPS.DELIVER); }}
+              className="w-full h-10 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 transition-colors">
+              🏠 Phân phát cho dân ({b.totalPackages - b.deliveredCount} còn lại)
+            </button>
+            <button onClick={() => handleReturnBatch(b.id)}
+              className="w-full h-9 bg-amber-50 text-amber-700 rounded-xl text-xs font-medium hover:bg-amber-100 transition-colors border border-amber-200">
+              📦 Trả lô về Shop (dân không đến nhận đủ)
+            </button>
+          </div>
         )}
 
         <button onClick={() => setDetailBatch(b)}
@@ -403,12 +382,19 @@ export default function BatchDelivery() {
             className="w-full border rounded-xl px-3 h-11 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
             <option value="">-- Chọn cửa hàng --</option>
             {shops.map(s => (
-              <option key={s.id} value={s.id}>
-                {s.fullName}{s.province ? ` (${s.province})` : ''}
+              <option key={s.id} value={s.id} disabled={!s.walletAddress}>
+                {s.fullName}{s.province ? ` (${s.province})` : ''}{!s.walletAddress ? ' ⚠️ Chưa có ví' : ''}
               </option>
             ))}
           </select>
-          <button onClick={handleClaim} disabled={processing || !selectedShopId}
+          {/* Cảnh báo nếu shop được chọn chưa có ví blockchain */}
+          {selectedShopId && !shops.find(s => String(s.id) === String(selectedShopId))?.walletAddress && (
+            <div className="bg-red-50 border border-red-300 rounded-xl px-4 py-3 mb-4 text-sm text-red-700">
+              ⚠️ Shop này chưa được thiết lập địa chỉ ví Blockchain. Vui lòng chọn shop khác hoặc liên hệ Admin.
+            </div>
+          )}
+          <button onClick={handleClaim}
+            disabled={processing || !selectedShopId || !shops.find(s => String(s.id) === String(selectedShopId))?.walletAddress}
             className="w-full h-12 bg-blue-700 text-white rounded-2xl font-semibold disabled:opacity-50">
             {processing ? 'Đang xử lý...' : 'Xác nhận nhận lô'}
           </button>
@@ -436,89 +422,11 @@ export default function BatchDelivery() {
               {activeBatch.totalPackages - activeBatch.deliveredCount} phần
             </span>
           </div>
-          
-          {surveyingWallet ? (
-            <div className="bg-white rounded-2xl p-5 shadow-lg border border-gray-100">
-              <h3 className="font-bold text-lg mb-4 text-gray-800">Khảo sát thiệt hại sau bão</h3>
-              
-              <div className="space-y-3 mb-6">
-                <label className={`block p-3 rounded-xl border-2 transition-colors cursor-pointer ${damageLevel === 1 ? 'border-blue-500 bg-blue-50' : 'border-gray-100 hover:border-blue-200'}`}>
-                  <div className="flex items-center gap-3">
-                    <input type="radio" value={1} checked={damageLevel === 1} onChange={() => setDamageLevel(1)} className="w-5 h-5 accent-blue-600" />
-                    <div>
-                      <p className="font-bold text-sm text-gray-800">Mức 1 - Bình thường</p>
-                      <p className="text-xs text-gray-500">Ngập nhẹ, nhà & kết cấu an toàn</p>
-                    </div>
-                  </div>
-                </label>
-                <label className={`block p-3 rounded-xl border-2 transition-colors cursor-pointer ${damageLevel === 2 ? 'border-orange-500 bg-orange-50' : 'border-gray-100 hover:border-orange-200'}`}>
-                  <div className="flex items-center gap-3">
-                    <input type="radio" value={2} checked={damageLevel === 2} onChange={() => setDamageLevel(2)} className="w-5 h-5 accent-orange-600" />
-                    <div>
-                      <p className="font-bold text-sm text-gray-800">Mức 2 - Thiệt hại nặng</p>
-                      <p className="text-xs text-gray-500">Ngập sâu, hư hỏng đồ đạc lớn</p>
-                    </div>
-                  </div>
-                </label>
-                <label className={`block p-3 rounded-xl border-2 transition-colors cursor-pointer ${damageLevel === 3 ? 'border-red-500 bg-red-50' : 'border-gray-100 hover:border-red-200'}`}>
-                  <div className="flex items-center gap-3">
-                    <input type="radio" value={3} checked={damageLevel === 3} onChange={() => setDamageLevel(3)} className="w-5 h-5 accent-red-600" />
-                    <div>
-                      <p className="font-bold text-sm text-gray-800">Mức 3 - Nghiêm trọng</p>
-                      <p className="text-xs text-gray-500">Sập nhà, sạt lở, mất trắng tài sản</p>
-                    </div>
-                  </div>
-                </label>
-              </div>
 
-              {damageLevel > 1 && (
-                <div className="mb-6">
-                  <p className="text-sm font-semibold mb-2 text-gray-800">📸 Ảnh hiện trường (Bắt buộc)</p>
-                  <label className="block w-full h-32 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors">
-                    {evidenceFile ? (
-                      <div className="text-center">
-                        <p className="text-sm text-blue-600 font-medium">{evidenceFile.name}</p>
-                        <p className="text-xs text-gray-500 mt-1">Nhấn để thay đổi</p>
-                      </div>
-                    ) : (
-                      <div className="text-center text-gray-400">
-                        <span className="text-2xl mb-1">📷</span>
-                        <p className="text-sm font-medium">Chụp hoặc chọn ảnh</p>
-                      </div>
-                    )}
-                    <input type="file" accept="image/*" 
-                      onChange={e => setEvidenceFile(e.target.files[0])} 
-                      className="hidden" />
-                  </label>
-                </div>
-              )}
-
-              {damageLevel === 1 ? (
-                <button onClick={handleCloseSurvey}
-                  className="w-full h-14 bg-gray-100 text-gray-800 rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors border-2 border-gray-200">
-                  ⏭ Mức 1 (Bình thường) - Bỏ qua & Quét tiếp
-                </button>
-              ) : (
-                <div className="flex gap-2">
-                  <button onClick={handleCloseSurvey}
-                    className="flex-1 h-14 bg-gray-100 text-gray-600 rounded-xl font-medium text-sm hover:bg-gray-200 transition-colors">
-                    Hủy báo cáo
-                  </button>
-                  <button onClick={handleSubmitSurvey} disabled={surveyProcessing}
-                    className="flex-1 h-14 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center">
-                    {surveyProcessing ? (
-                      <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin mr-2" /> Đang gửi...</>
-                    ) : (
-                      '🚩 Gửi báo cáo thiệt hại'
-                    )}
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : processing ? (
-            <div className="flex justify-center py-16">
+          {processing ? (
+            <div className="flex justify-center items-center py-16 gap-3">
               <div className="w-10 h-10 border-4 border-green-200 border-t-green-600 rounded-full animate-spin" />
-              <p className="ml-3 text-sm text-green-700 animate-pulse">Đang xác nhận Web3...</p>
+              <p className="text-sm text-green-700 animate-pulse">Đang xác nhận Web3...</p>
             </div>
           ) : (
             <QrScanner onSuccess={handleScanCitizen} onError={() => setErrorFlash(n => n + 1)} />
@@ -554,12 +462,13 @@ function StatusBadge({ status, pickedUpIds, batchId }) {
     );
   }
   const map = {
-    WAITING_SHOP:  { cls: 'bg-amber-100 text-amber-700',   label: 'Chờ Shop duyệt' },
-    SHOP_REJECTED: { cls: 'bg-red-100 text-red-600',       label: '❌ Shop từ chối' },
-    ACCEPTED:      { cls: 'bg-blue-100 text-blue-700',     label: '📷 Chưa quét' },
-    PICKED_UP:     { cls: 'bg-purple-100 text-purple-700', label: 'Đã lấy hàng' },
-    IN_PROGRESS:   { cls: 'bg-purple-100 text-purple-700', label: 'Đang phân phát' },
-    COMPLETED:     { cls: 'bg-green-100 text-green-700',   label: 'Hoàn thành' },
+    WAITING_SHOP:     { cls: 'bg-amber-100 text-amber-700',   label: 'Chờ Shop duyệt' },
+    SHOP_REJECTED:    { cls: 'bg-red-100 text-red-600',       label: '❌ Shop từ chối' },
+    ACCEPTED:         { cls: 'bg-blue-100 text-blue-700',     label: '📷 Chưa quét' },
+    PICKED_UP:        { cls: 'bg-purple-100 text-purple-700', label: 'Đã lấy hàng' },
+    IN_PROGRESS:      { cls: 'bg-purple-100 text-purple-700', label: 'Đang phân phát' },
+    COMPLETED:        { cls: 'bg-green-100 text-green-700',   label: 'Hoàn thành' },
+    RETURNED_TO_SHOP: { cls: 'bg-gray-100 text-gray-600',     label: '↩️ Đã trả về Shop' },
   };
   const m = map[status] || { cls: 'bg-gray-100 text-gray-600', label: status };
   return (

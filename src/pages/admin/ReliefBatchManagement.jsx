@@ -4,13 +4,14 @@ import { batchApi } from '../../api/batchApi';
 import { adminApi } from '../../api/adminApi';
 
 const STATUS_META = {
-  CREATED:       { label: 'Chờ TNV nhận',    color: 'bg-gray-100 text-gray-600'     },
-  WAITING_SHOP:  { label: 'Chờ Shop duyệt',  color: 'bg-amber-100 text-amber-700'   },
-  SHOP_REJECTED: { label: 'Shop từ chối',    color: 'bg-red-100 text-red-600'       },
-  ACCEPTED:      { label: 'Shop đã duyệt',   color: 'bg-blue-100 text-blue-700'     },
-  PICKED_UP:     { label: 'TNV đã lấy hàng', color: 'bg-purple-100 text-purple-700' },
-  IN_PROGRESS:   { label: 'Đang phân phát',  color: 'bg-orange-100 text-orange-700' },
-  COMPLETED:     { label: 'Hoàn thành',      color: 'bg-green-100 text-green-700'   },
+  CREATED:          { label: 'Chờ TNV nhận',    color: 'bg-gray-100 text-gray-600'     },
+  WAITING_SHOP:     { label: 'Chờ Shop duyệt',  color: 'bg-amber-100 text-amber-700'   },
+  SHOP_REJECTED:    { label: 'Shop từ chối',    color: 'bg-red-100 text-red-600'       },
+  ACCEPTED:         { label: 'Shop đã duyệt',   color: 'bg-blue-100 text-blue-700'     },
+  PICKED_UP:        { label: 'TNV đã lấy hàng', color: 'bg-purple-100 text-purple-700' },
+  IN_PROGRESS:      { label: 'Đang phân phát',  color: 'bg-orange-100 text-orange-700' },
+  COMPLETED:        { label: 'Hoàn thành',      color: 'bg-green-100 text-green-700'   },
+  RETURNED_TO_SHOP: { label: '↩️ Trả về Shop',  color: 'bg-gray-100 text-gray-600'     },
 };
 
 const PROVINCES = [
