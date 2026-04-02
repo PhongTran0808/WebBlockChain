@@ -124,11 +124,14 @@ export default function RegisterPage() {
                   toast.error(form.role === 'CITIZEN' ? 'Vui lòng nhập CCCD' : 'Nhập tên đăng nhập'); 
                   return; 
                 }
-                if (form.role === 'CITIZEN' && !/^\d{15}$/.test(uname)) {
-                  toast.error('CCCD phải bao gồm đúng 15 số');
+                // Extract only digits from input (remove spaces, hyphens, etc)
+                const digitOnly = uname.replace(/\D/g, '');
+                if (form.role === 'CITIZEN' && (digitOnly.length < 10 || digitOnly.length > 20)) {
+                  toast.error('CCCD phải có từ 10-20 số');
                   return;
                 }
                 setStep(2);
+                
               }}
               className="w-full h-12 bg-blue-700 text-white rounded-xl font-semibold">
               Tiếp theo →
