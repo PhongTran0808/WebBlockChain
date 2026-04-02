@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { orderApi } from '../../api/orderApi';
 import { adminApi } from '../../api/adminApi';
@@ -54,6 +55,7 @@ function OrderQR({ order, onZoom }) {
 }
 
 export default function OrderFulfillment() {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [tab, setTab] = useState('PENDING');
   const [loading, setLoading] = useState(true);
@@ -294,15 +296,20 @@ export default function OrderFulfillment() {
                     )}
                    </>
                 ) : (
-                   <div className="px-4 pb-4">
+                       <div className="px-4 pb-4">
                       {o.status === 'READY' && (
                         <div className="flex flex-col items-center bg-blue-50 rounded-xl p-3 border border-blue-100">
                           <QRCodeCanvas value={`BATCH:${o.id}`} size={100} fgColor="#1e3a8a" />
                           <p className="text-[10px] text-gray-400 mt-2">Mã QR Lô: {o.id}</p>
                         </div>
                       )}
-                      <div className="text-center">
-                        <a href="/shop/batches" className="text-xs text-blue-600 font-medium hover:underline">Quản lý chi tiết lô hàng →</a>
+                      <div className="text-center mt-2">
+                        <button
+                          onClick={() => navigate(`/shop/batches/${o.id}`)}
+                          className="text-xs text-blue-600 font-medium hover:underline"
+                        >
+                          Quản lý chi tiết lô hàng →
+                        </button>
                       </div>
                    </div>
                 )}

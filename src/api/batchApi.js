@@ -17,6 +17,7 @@ export const batchApi = {
   // Shop
   getShopPending: () => axiosClient.get('/api/batches/shop/pending'),
   getShopAll: () => axiosClient.get('/api/batches/shop/all'),
+  getBatchById: (id) => axiosClient.get(`/api/batches/${id}`),
   acceptBatch: (id) => axiosClient.post(`/api/batches/${id}/accept`),
   rejectBatch: (id) => axiosClient.post(`/api/batches/${id}/reject`),
 };

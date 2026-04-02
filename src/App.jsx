@@ -28,6 +28,7 @@ import DamageDashboard from './pages/citizen/DamageDashboard';
 import ShopLayout from './components/layout/ShopLayout';
 import ShopPOS from './pages/shop/ShopPOS';
 import BatchApproval from './pages/shop/BatchApproval';
+import BatchDetail from './pages/shop/BatchDetail';
 import Inventory from './pages/shop/Inventory';
 import Liquidity from './pages/shop/Liquidity';
 import ShopReceiveToken from './pages/shop/ShopReceiveToken';
@@ -101,6 +102,7 @@ export default function App() {
             <Route path="receive" element={<ShopReceiveToken />} />
             <Route path="liquidity" element={<Liquidity />} />
             <Route path="orders" element={<OrderFulfillment />} />
+            <Route path="batches/:id" element={<BatchDetail />} />
           </Route>
 
           {/* Transporter */}
