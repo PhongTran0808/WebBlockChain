@@ -24,8 +24,18 @@ export default function StandaloneSurvey() {
     setEvidenceFile(null);
   };
 
-  // Sử dụng hook chống dội
-  const { handleScan } = useQRScanner(handleScanCitizenInner);
+  // Custom validation for wallet addresses
+  const validateWalletAddress = (data) => {
+    if (!data) return [false, 'Mã QR không có dữ liệu'];
+    // Wallet address should be at least 10 characters
+    if (data.length < 10) {
+      return [false, 'Địa chỉ ví không hợp lệ (quá ngắn)'];
+    }
+    return [true];
+  };
+
+  // Sử dụng hook chống dội với custom validator cho wallet address
+  const { handleScan } = useQRScanner(handleScanCitizenInner, validateWalletAddress);
 
   // CLOSE / SKIP
   const handleCloseSurvey = () => {
@@ -54,7 +64,8 @@ export default function StandaloneSurvey() {
       toast.success('Đã gửi báo cáo thiệt hại thành công');
       handleCloseSurvey();
     } catch (err) {
-      toast.error('Gửi báo cáo thất bại');
+      toast.error(err?.response?.data?.message || 'Gửi báo cáo thất bại');
+      processingRef.current = false;
     } finally {
       setSurveyProcessing(false);
     }
